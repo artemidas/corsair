@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useProjects, type Project } from "@/composables/useProjects";
 import { useTheme } from "@/composables/useTheme";
+import { confirm } from "@tauri-apps/plugin-dialog";
 
 const emit = defineEmits<{
   new: [];
@@ -38,11 +39,17 @@ function iconFor(kind: Project["kind"]) {
   return kind === "kubernetesClusterReview" ? Hexagon : Box;
 }
 
-function onDelete(p: Project, ev: Event) {
+async function onDelete(p: Project, ev: Event) {
   ev.stopPropagation();
   ev.preventDefault();
-  if (!confirm(`Delete project "${p.name}"?`)) return;
-  deleteProject(p.id).catch((err) => alert(String(err)));
+  const confirmed = await confirm(`Delete project "${p.name}"?`, { title: 'Tauri', kind: 'warning' });
+  if (!confirmed) return;
+  try {
+    await deleteProject(p.id);
+  } catch (err) {
+    alert(String(err));
+    console.error("Failed to delete project:", err);
+  }
 }
 </script>
 
