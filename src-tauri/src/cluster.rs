@@ -1,13 +1,24 @@
 //! Cluster connection handling.
 //!
-//! MVP scope: connect only via the system's default kubeconfig, using
-//! whatever context is currently active (same resolution `kubectl` uses:
-//! `$KUBECONFIG` or `~/.kube/config`, falling back to in-cluster config).
-//! No context selector yet — that's a follow-up iteration.
+//! MVP scope: connect via the system's default kubeconfig. When the caller
+//! supplies a context name, that context is selected from the kubeconfig
+//! (resolved against the same env the default config uses — `$KUBECONFIG`
+//! or `~/.kube/config`). When no name is supplied, the currently active
+//! context is used, matching what `kubectl` does by default.
 
-use kube::Client;
+use kube::config::KubeConfigOptions;
+use kube::{Client, Config};
 
-/// Build a `kube::Client` from the default kubeconfig / active context.
-pub async fn connect() -> Result<Client, kube::Error> {
-    Client::try_default().await
+pub async fn connect(context: Option<&str>) -> Result<Client, kube::Error> {
+    match context {
+        Some(name) => {
+            let opts = KubeConfigOptions {
+                context: Some(name.to_string()),
+                ..Default::default()
+            };
+            let config = Config::from_kubeconfig(&opts).await?;
+            Client::try_from(config)
+        }
+        None => Client::try_default().await,
+    }
 }
