@@ -3,21 +3,22 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Stepper,
+  StepperDescription,
+  StepperIndicator,
+  StepperItem,
+  StepperSeparator,
+  StepperTitle,
+  StepperTrigger,
+} from "@/components/ui/stepper";
 import {
   useProjects,
   type Project,
   type ProjectInput,
-  type ProjectKind,
 } from "@/composables/useProjects";
+import { ProjectKindStep, ProjectDetailsStep } from "@/components/form";
+import type { ProjectFormValues } from "@/components/form";
 
 const props = defineProps<{
   project: Project | null;
@@ -27,21 +28,16 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-interface FormValues {
-  name: string;
-  kind: ProjectKind;
-  context: string;
-  image: string;
-}
-
 const dialogRef = ref<HTMLDialogElement | null>(null);
 const { createProject, updateProject, selectProject } = useProjects();
 
 const isEdit = computed(() => props.project !== null);
 const title = computed(() => (isEdit.value ? "Edit project" : "New project"));
 const isSubmitting = ref(false);
+const submitError = ref<string | null>(null);
+const currentStep = ref(1);
 
-const form = useForm({
+const form = useForm<ProjectFormValues>({
   validationSchema: toTypedSchema(
     z
       .object({
@@ -64,8 +60,9 @@ const form = useForm({
   },
 });
 
-async function onSubmit(values: FormValues) {
+async function submitProject(values: ProjectFormValues) {
   isSubmitting.value = true;
+  submitError.value = null;
   try {
     const input: ProjectInput = {
       name: values.name.trim(),
@@ -83,21 +80,26 @@ async function onSubmit(values: FormValues) {
     }
     close();
   } catch (err) {
-    form.setFieldError("name", String(err));
+    console.error("Failed to save project:", err);
+    submitError.value = err instanceof Error ? err.message : String(err);
   } finally {
     isSubmitting.value = false;
   }
 }
 
-async function handleSubmit() {
-  const result = await form.validate();
-  if (result.valid) {
-    await onSubmit(result.values as FormValues);
-  }
+function selectKind(kind: ProjectFormValues["kind"]) {
+  form.setFieldValue("kind", kind);
+  currentStep.value = 2;
+}
+
+function goBack() {
+  if (isEdit.value) return;
+  currentStep.value = 1;
 }
 
 function reset() {
   if (props.project) {
+    currentStep.value = 2;
     form.resetForm({
       values: {
         name: props.project.name,
@@ -107,6 +109,7 @@ function reset() {
       },
     });
   } else {
+    currentStep.value = 1;
     form.resetForm({
       values: {
         name: "",
@@ -139,115 +142,45 @@ function close() {
     <div class="modal-box max-w-lg">
       <h3 class="text-lg font-bold">{{ title }}</h3>
 
-      <form class="mt-4 flex flex-col gap-4" @submit.prevent="handleSubmit">
-        <FormField v-slot="{ field }" name="name">
-          <FormItem>
-            <FormLabel>Name</FormLabel>
-            <FormControl>
-              <Input
-                v-bind="field"
-                placeholder="Production cluster review"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+      <Stepper v-if="!isEdit" v-model="currentStep" class="mt-4 mb-2 flex w-full items-start gap-2">
+        <StepperItem :step="1">
+          <StepperTrigger>
+            <StepperIndicator>1</StepperIndicator>
+            <div class="text-left">
+              <StepperTitle>Kind</StepperTitle>
+              <StepperDescription>Pick a project type</StepperDescription>
+            </div>
+          </StepperTrigger>
+          <StepperSeparator/>
+        </StepperItem>
+        <StepperItem :step="2">
+          <StepperTrigger>
+            <StepperIndicator>2</StepperIndicator>
+            <div class="text-left">
+              <StepperTitle>Details</StepperTitle>
+              <StepperDescription>Name and config</StepperDescription>
+            </div>
+          </StepperTrigger>
+        </StepperItem>
+      </Stepper>
 
-        <FormField v-slot="{ field }" name="kind">
-          <FormItem>
-            <FormLabel>Kind</FormLabel>
-            <FormControl>
-              <div class="flex gap-2">
-                <label
-                  class="flex flex-1 cursor-pointer items-start gap-2 rounded-md border p-3"
-                  :class="field.value === 'kubernetesClusterReview' ? 'border-primary bg-primary/10' : 'border-input'"
-                >
-                  <input
-                    type="radio"
-                    value="kubernetesClusterReview"
-                    :checked="field.value === 'kubernetesClusterReview'"
-                    class="mt-1 h-4 w-4 accent-primary"
-                    @change="(e) => field.onChange((e.target as HTMLInputElement).value)"
-                  />
-                  <div>
-                    <div class="text-sm font-medium">Kubernetes cluster review</div>
-                    <div class="text-xs text-muted-foreground">
-                      Scan a live cluster for misconfigurations.
-                    </div>
-                  </div>
-                </label>
-                <label
-                  class="flex flex-1 cursor-pointer items-start gap-2 rounded-md border p-3"
-                  :class="field.value === 'containerImageReview' ? 'border-secondary bg-secondary/10' : 'border-input'"
-                >
-                  <input
-                    type="radio"
-                    value="containerImageReview"
-                    :checked="field.value === 'containerImageReview'"
-                    class="mt-1 h-4 w-4 accent-secondary"
-                    @change="(e) => field.onChange((e.target as HTMLInputElement).value)"
-                  />
-                  <div>
-                    <div class="text-sm font-medium">Container image review</div>
-                    <div class="text-xs text-muted-foreground">
-                      Inspect a container image for risks.
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+      <div
+        v-if="submitError"
+        class="alert alert-error mt-4 text-sm"
+        role="alert"
+      >
+        <span>{{ submitError }}</span>
+      </div>
 
-        <FormField
-          v-if="form.values.kind === 'kubernetesClusterReview'"
-          v-slot="{ field }"
-          name="context"
-        >
-          <FormItem>
-            <FormLabel>
-              Kubeconfig context
-              <span class="text-xs font-normal text-muted-foreground">(optional)</span>
-            </FormLabel>
-            <FormControl>
-              <Input
-                v-bind="field"
-                placeholder="leave empty to use the active context"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-
-        <FormField v-else v-slot="{ field }" name="image">
-          <FormItem>
-            <FormLabel>Image reference</FormLabel>
-            <FormControl>
-              <Input
-                v-bind="field"
-                placeholder="nginx:1.27"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-
-        <div class="modal-action mt-2">
-          <Button
-            type="button"
-            variant="ghost"
-            :disabled="isSubmitting"
-            @click="close"
-          >
-            Cancel
-          </Button>
-          <Button type="submit" :disabled="isSubmitting">
-            <span v-if="isSubmitting" class="loading loading-spinner loading-sm"></span>
-            {{ isEdit ? "Save" : "Create" }}
-          </Button>
-        </div>
-      </form>
+      <ProjectKindStep v-if="currentStep === 1" @select="selectKind" />
+      <ProjectDetailsStep
+        v-else
+        :is-edit="isEdit"
+        :is-submitting="isSubmitting"
+        @submit="submitProject"
+        @cancel="close"
+        @back="goBack"
+      />
     </div>
     <form method="dialog" class="modal-backdrop">
       <button>close</button>
