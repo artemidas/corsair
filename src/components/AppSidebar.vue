@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Box, Hexagon, Plus, Trash2 } from "@lucide/vue";
+import { Box, Hexagon, Moon, Plus, Sun, Trash2 } from "@lucide/vue";
 import {
   Sidebar,
   SidebarContent,
@@ -14,7 +14,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import { useProjects, type Project } from "@/composables/useProjects";
+import { useTheme } from "@/composables/useTheme";
 
 const emit = defineEmits<{
   new: [];
@@ -29,6 +31,8 @@ const {
   loading,
   loadError,
 } = useProjects();
+
+const { theme, toggleTheme } = useTheme();
 
 function iconFor(kind: Project["kind"]) {
   return kind === "kubernetesClusterReview" ? Hexagon : Box;
@@ -102,8 +106,21 @@ function onDelete(p: Project, ev: Event) {
     </SidebarContent>
 
     <SidebarFooter>
-      <div class="px-2 text-xs text-muted-foreground">
-        {{ projects.length }} project{{ projects.length === 1 ? "" : "s" }}
+      <div class="flex items-center justify-between gap-2 px-2">
+        <span class="truncate text-xs text-muted-foreground">
+          {{ projects.length }} project{{ projects.length === 1 ? "" : "s" }}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          class="shrink-0"
+          :title="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+          @click="toggleTheme"
+        >
+          <Sun v-if="theme === 'dark'" />
+          <Moon v-else />
+          <span class="sr-only">Toggle theme</span>
+        </Button>
       </div>
     </SidebarFooter>
   </Sidebar>
