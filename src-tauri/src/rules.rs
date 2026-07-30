@@ -1,14 +1,27 @@
-//! Fixed set of security rules run against a connected cluster.
+//! Security rules run against a connected cluster.
 //!
-//! MVP scope: four hardcoded rules, no custom rule management, no
-//! persistence. Resources are fetched once into `ClusterData` and every
-//! rule inspects that snapshot.
+//! Two kinds of rules are evaluated together during a scan:
+//! - **Hardcoded** rules (RBAC001/002, POD001/004) — fixed set in this file.
+//! - **Custom rules** — user-authored (DB) and built-in (curated library).
+//!   Each is a simple matcher: given a resource type, a field path, and
+//!   an expected value, flag any resource that has a value equal to the
+//!   expected one at that path. See `custom_rule::evaluate_field_path` and
+//!   `value_matches` for the path syntax.
+//!
+//! Hardcoded rules read from a pre-fetched `ClusterData` snapshot so they
+//! all see the same view. Custom rules use the cluster client directly to
+//! fetch only the resource type they need.
 
-use k8s_openapi::api::core::v1::Pod;
-use k8s_openapi::api::rbac::v1::{ClusterRole, ClusterRoleBinding, Role};
+use k8s_openapi::api::core::v1::{Pod, ServiceAccount};
+use k8s_openapi::api::rbac::v1::{
+    ClusterRole, ClusterRoleBinding, Role, RoleBinding,
+};
 use kube::api::ListParams;
 use kube::{Api, Client};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+use crate::custom_rule::{evaluate_field_path, value_matches, CustomRule};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -31,8 +44,8 @@ pub struct Finding {
     pub message: String,
 }
 
-/// Snapshot of the cluster resources the rules below need. Fetched once per
-/// scan so every rule reads the same consistent view.
+/// Snapshot of the cluster resources the hardcoded rules need. Fetched
+/// once per scan so every rule reads the same consistent view.
 pub struct ClusterData {
     pub cluster_role_bindings: Vec<ClusterRoleBinding>,
     pub roles: Vec<Role>,
@@ -263,7 +276,136 @@ fn all_rules() -> Vec<Box<dyn Rule>> {
     ]
 }
 
-/// Run every fixed rule against the given snapshot and flatten the results.
+/// Run every hardcoded rule against the given snapshot and flatten the results.
 pub fn run_rules(data: &ClusterData) -> Vec<Finding> {
     all_rules().iter().flat_map(|rule| rule.check(data)).collect()
+}
+
+/// Evaluate a single custom rule against the cluster. Fetches the
+/// resources of the rule's `resource_type`, walks the `field_path`, and
+/// emits one finding per resource where any leaf value matches
+/// `expected_value`.
+pub async fn evaluate_custom_rule(
+    client: &Client,
+    rule: &CustomRule,
+) -> Result<Vec<Finding>, kube::Error> {
+    let mut findings = Vec::new();
+    let items = fetch_resources_as_json(client, &rule.resource_type).await?;
+    let kind = rule.resource_type.clone();
+
+    for item in &items {
+        let values = evaluate_field_path(item, &rule.field_path);
+        if values.iter().any(|v| value_matches(v, &rule.expected_value)) {
+            let name = item
+                .get("metadata")
+                .and_then(|m| m.get("name"))
+                .and_then(|n| n.as_str())
+                .unwrap_or("")
+                .to_string();
+            let ns = item
+                .get("metadata")
+                .and_then(|m| m.get("namespace"))
+                .and_then(|n| n.as_str())
+                .map(String::from);
+            let id = format!(
+                "{}-{}-{}",
+                rule.id,
+                ns.clone().unwrap_or_default(),
+                name
+            );
+            let msg = if rule.description.is_empty() {
+                rule.title.clone()
+            } else {
+                format!("{}: {}", rule.title, rule.description)
+            };
+            findings.push(Finding {
+                id,
+                rule_id: rule.id.clone(),
+                severity: rule.severity,
+                resource_kind: kind.clone(),
+                resource_name: name,
+                namespace: ns,
+                message: msg,
+            });
+        }
+    }
+
+    Ok(findings)
+}
+
+/// Run every custom rule, collecting findings. Errors evaluating an
+/// individual rule are logged and skipped (the scan keeps going).
+pub async fn evaluate_custom_rules(
+    client: &Client,
+    rules: &[CustomRule],
+) -> Vec<Finding> {
+    let mut out = Vec::new();
+    for rule in rules {
+        match evaluate_custom_rule(client, rule).await {
+            Ok(f) => out.extend(f),
+            Err(e) => eprintln!("error evaluating custom rule {}: {e}", rule.id),
+        }
+    }
+    out
+}
+
+/// Fetch every resource of the given type as a `serde_json::Value`.
+/// Returns an empty vec for unknown resource types.
+async fn fetch_resources_as_json(
+    client: &Client,
+    resource_type: &str,
+) -> Result<Vec<Value>, kube::Error> {
+    match resource_type {
+        "Pod" => {
+            let api: Api<Pod> = Api::all(client.clone());
+            let pods = api.list(&ListParams::default()).await?;
+            Ok(pods
+                .items
+                .iter()
+                .filter_map(|p| serde_json::to_value(p).ok())
+                .collect())
+        }
+        "ServiceAccount" => {
+            let api: Api<ServiceAccount> = Api::all(client.clone());
+            let sas = api.list(&ListParams::default()).await?;
+            Ok(sas
+                .items
+                .iter()
+                .filter_map(|s| serde_json::to_value(s).ok())
+                .collect())
+        }
+        "Role" => {
+            let api: Api<Role> = Api::all(client.clone());
+            let rs = api.list(&ListParams::default()).await?;
+            Ok(rs.items
+                .iter()
+                .filter_map(|r| serde_json::to_value(r).ok())
+                .collect())
+        }
+        "ClusterRole" => {
+            let api: Api<ClusterRole> = Api::all(client.clone());
+            let rs = api.list(&ListParams::default()).await?;
+            Ok(rs.items
+                .iter()
+                .filter_map(|r| serde_json::to_value(r).ok())
+                .collect())
+        }
+        "RoleBinding" => {
+            let api: Api<RoleBinding> = Api::all(client.clone());
+            let rs = api.list(&ListParams::default()).await?;
+            Ok(rs.items
+                .iter()
+                .filter_map(|r| serde_json::to_value(r).ok())
+                .collect())
+        }
+        "ClusterRoleBinding" => {
+            let api: Api<ClusterRoleBinding> = Api::all(client.clone());
+            let rs = api.list(&ListParams::default()).await?;
+            Ok(rs.items
+                .iter()
+                .filter_map(|r| serde_json::to_value(r).ok())
+                .collect())
+        }
+        _ => Ok(vec![]),
+    }
 }

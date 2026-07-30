@@ -1,10 +1,13 @@
+mod builtin_rules;
 mod cluster;
+mod custom_rule;
 mod projects;
 mod rules;
 
 use k8s_openapi::api::core::v1::Namespace;
 use kube::api::ListParams;
 use kube::{Api, Client};
+use custom_rule::{CustomRule, CustomRuleInput};
 use projects::{Project, ProjectInput};
 use rules::Finding;
 use std::sync::Mutex;
@@ -50,7 +53,10 @@ fn active_context(state: State<'_, AppState>) -> Option<Option<String>> {
 }
 
 #[tauri::command]
-async fn run_scan(state: State<'_, AppState>) -> Result<Vec<Finding>, String> {
+async fn run_scan(
+    state: State<'_, AppState>,
+    db: State<'_, DbInstances>,
+) -> Result<Vec<Finding>, String> {
     let client = state
         .client
         .lock()
@@ -62,7 +68,12 @@ async fn run_scan(state: State<'_, AppState>) -> Result<Vec<Finding>, String> {
         .await
         .map_err(|e| e.to_string())?;
 
-    Ok(rules::run_rules(&data))
+    let mut findings = rules::run_rules(&data);
+
+    let custom_rules = custom_rule::all_rules(&db).await?;
+    findings.extend(rules::evaluate_custom_rules(&client, &custom_rules).await);
+
+    Ok(findings)
 }
 
 #[tauri::command]
@@ -97,20 +108,67 @@ async fn delete_project(db: State<'_, DbInstances>, id: String) -> Result<(), St
     projects::delete_project(&db, &id).await
 }
 
+#[tauri::command]
+async fn list_custom_rules(db: State<'_, DbInstances>) -> Result<Vec<CustomRule>, String> {
+    let mut out = custom_rule::builtin();
+    out.extend(custom_rule::list_rules(&db).await?);
+    Ok(out)
+}
+
+#[tauri::command]
+async fn create_custom_rule(
+    db: State<'_, DbInstances>,
+    input: CustomRuleInput,
+) -> Result<CustomRule, String> {
+    custom_rule::create_rule(&db, input).await
+}
+
+#[tauri::command]
+async fn update_custom_rule(
+    db: State<'_, DbInstances>,
+    id: String,
+    input: CustomRuleInput,
+) -> Result<CustomRule, String> {
+    custom_rule::update_rule(&db, id, input).await
+}
+
+#[tauri::command]
+async fn delete_custom_rule(db: State<'_, DbInstances>, id: String) -> Result<(), String> {
+    custom_rule::delete_rule(&db, &id).await
+}
+
 fn migrations() -> Vec<Migration> {
-    vec![Migration {
-        version: 1,
-        description: "create projects table",
-        sql: "CREATE TABLE IF NOT EXISTS projects (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            kind TEXT NOT NULL,
-            config TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )",
-        kind: MigrationKind::Up,
-    }]
+    vec![
+        Migration {
+            version: 1,
+            description: "create projects table",
+            sql: "CREATE TABLE IF NOT EXISTS projects (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                config TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "create custom_rules table",
+            sql: "CREATE TABLE IF NOT EXISTS custom_rules (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                severity TEXT NOT NULL,
+                resource_type TEXT NOT NULL,
+                field_path TEXT NOT NULL,
+                expected_value TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )",
+            kind: MigrationKind::Up,
+        },
+    ]
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -133,6 +191,10 @@ pub fn run() {
             create_project,
             update_project,
             delete_project,
+            list_custom_rules,
+            create_custom_rule,
+            update_custom_rule,
+            delete_custom_rule,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

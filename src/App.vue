@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
   SidebarProvider,
   SidebarInset,
@@ -7,31 +7,68 @@ import {
 } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar.vue";
 import { ProjectDetail, ProjectEditor } from "@/components/project";
+import { RuleDetail, RuleEditor } from "@/components/rule";
 import { useProjects, type Project } from "@/composables/useProjects";
+import { useCustomRules, type CustomRule } from "@/composables/useCustomRules";
 
-const { loadProjects, refreshConnection, selectedProject } = useProjects();
+const {
+  loadProjects,
+  refreshConnection,
+  selectedProject,
+} = useProjects();
 
-const editorOpen = ref(false);
-const editorTarget = ref<Project | null>(null);
+const { loadRules, rules } = useCustomRules();
 
-function openNew() {
-  editorTarget.value = null;
-  editorOpen.value = true;
+const projectEditorOpen = ref(false);
+const projectEditorTarget = ref<Project | null>(null);
+
+const ruleEditorOpen = ref(false);
+const ruleEditorTarget = ref<CustomRule | null>(null);
+
+const selectedRuleId = ref<string | null>(null);
+const selectedRule = computed<CustomRule | null>(
+  () => rules.value.find((r) => r.id === selectedRuleId.value) ?? null,
+);
+
+function openNewProject() {
+  projectEditorTarget.value = null;
+  projectEditorOpen.value = true;
 }
 
-function openEdit(project: Project) {
-  editorTarget.value = project;
-  editorOpen.value = true;
+function openEditProject(project: Project) {
+  projectEditorTarget.value = project;
+  projectEditorOpen.value = true;
+}
+
+function openNewRule() {
+  ruleEditorTarget.value = null;
+  ruleEditorOpen.value = true;
+}
+
+function openEditRule(rule: CustomRule) {
+  ruleEditorTarget.value = rule;
+  ruleEditorOpen.value = true;
+}
+
+function onSelectRule(rule: CustomRule) {
+  selectedRuleId.value = rule.id;
 }
 
 onMounted(async () => {
-  await Promise.all([loadProjects(), refreshConnection()]);
+  await Promise.all([loadProjects(), loadRules(), refreshConnection()]);
 });
 </script>
 
 <template>
   <SidebarProvider>
-    <AppSidebar @new="openNew" @edit="openEdit" />
+    <AppSidebar
+      v-model:selectedRuleId="selectedRuleId"
+      @new="openNewProject"
+      @edit="openEditProject"
+      @newRule="openNewRule"
+      @editRule="openEditRule"
+      @selectRule="onSelectRule"
+    />
     <SidebarInset>
       <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
         <SidebarTrigger />
@@ -42,21 +79,33 @@ onMounted(async () => {
           <ProjectDetail
             v-if="selectedProject"
             :project="selectedProject"
-            @edit="openEdit"
+            @edit="openEditProject"
+          />
+          <RuleDetail
+            v-else-if="selectedRule"
+            :rule="selectedRule"
+            :selected-project="selectedProject"
+            @edit="openEditRule"
+            @back="selectedRuleId = null"
           />
           <div v-else class="card bg-base-100 shadow">
             <div class="card-body items-center text-center text-base-content/50">
-              <h2 class="card-title text-base-content">No project selected</h2>
-              <p>Pick a project from the sidebar or create a new one.</p>
+              <h2 class="card-title text-base-content">Nothing selected</h2>
+              <p>Pick a project or a rule from the sidebar to get started.</p>
             </div>
           </div>
         </div>
       </main>
     </SidebarInset>
     <ProjectEditor
-      v-if="editorOpen"
-      :project="editorTarget"
-      @close="editorOpen = false"
+      v-if="projectEditorOpen"
+      :project="projectEditorTarget"
+      @close="projectEditorOpen = false"
+    />
+    <RuleEditor
+      v-if="ruleEditorOpen"
+      :rule="ruleEditorTarget"
+      @close="ruleEditorOpen = false"
     />
   </SidebarProvider>
 </template>
