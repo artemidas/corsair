@@ -1,34 +1,25 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
+import { RouterView } from "vue-router";
 import {
   SidebarProvider,
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/AppSidebar.vue";
-import { ProjectDetail, ProjectEditor } from "@/components/project";
-import { RuleDetail, RuleEditor } from "@/components/rule";
+import { ProjectEditor } from "@/components/project";
+import { RuleEditor } from "@/components/rule";
 import { useProjects, type Project } from "@/composables/useProjects";
 import { useCustomRules, type CustomRule } from "@/composables/useCustomRules";
 
-const {
-  loadProjects,
-  refreshConnection,
-  selectedProject,
-} = useProjects();
-
-const { loadRules, rules } = useCustomRules();
+const { loadProjects, refreshConnection } = useProjects();
+const { loadRules } = useCustomRules();
 
 const projectEditorOpen = ref(false);
 const projectEditorTarget = ref<Project | null>(null);
 
 const ruleEditorOpen = ref(false);
 const ruleEditorTarget = ref<CustomRule | null>(null);
-
-const selectedRuleId = ref<string | null>(null);
-const selectedRule = computed<CustomRule | null>(
-  () => rules.value.find((r) => r.id === selectedRuleId.value) ?? null,
-);
 
 function openNewProject() {
   projectEditorTarget.value = null;
@@ -50,10 +41,6 @@ function openEditRule(rule: CustomRule) {
   ruleEditorOpen.value = true;
 }
 
-function onSelectRule(rule: CustomRule) {
-  selectedRuleId.value = rule.id;
-}
-
 onMounted(async () => {
   await Promise.all([loadProjects(), loadRules(), refreshConnection()]);
 });
@@ -62,12 +49,10 @@ onMounted(async () => {
 <template>
   <SidebarProvider>
     <AppSidebar
-      v-model:selectedRuleId="selectedRuleId"
       @new="openNewProject"
       @edit="openEditProject"
       @newRule="openNewRule"
       @editRule="openEditRule"
-      @selectRule="onSelectRule"
     />
     <SidebarInset>
       <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
@@ -76,24 +61,7 @@ onMounted(async () => {
       </header>
       <main class="flex-1 overflow-y-auto bg-base-200 p-6">
         <div class="mx-auto flex max-w-5xl flex-col gap-4">
-          <ProjectDetail
-            v-if="selectedProject"
-            :project="selectedProject"
-            @edit="openEditProject"
-          />
-          <RuleDetail
-            v-else-if="selectedRule"
-            :rule="selectedRule"
-            :selected-project="selectedProject"
-            @edit="openEditRule"
-            @back="selectedRuleId = null"
-          />
-          <div v-else class="card bg-base-100 shadow">
-            <div class="card-body items-center text-center text-base-content/50">
-              <h2 class="card-title text-base-content">Nothing selected</h2>
-              <p>Pick a project or a rule from the sidebar to get started.</p>
-            </div>
-          </div>
+          <RouterView />
         </div>
       </main>
     </SidebarInset>

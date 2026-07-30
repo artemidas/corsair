@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import { z } from "zod";
@@ -26,10 +27,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
+  created: [id: string];
 }>();
 
+const router = useRouter();
 const dialogRef = ref<HTMLDialogElement | null>(null);
-const { createProject, updateProject, selectProject } = useProjects();
+const { createProject, updateProject } = useProjects();
 
 const isEdit = computed(() => props.project !== null);
 const title = computed(() => (isEdit.value ? "Edit project" : "New project"));
@@ -76,7 +79,7 @@ async function submitProject(values: ProjectFormValues) {
       await updateProject(props.project.id, input);
     } else {
       const created = await createProject(input);
-      selectProject(created.id);
+      router.push({ name: "project", params: { id: created.id } });
     }
     close();
   } catch (err) {

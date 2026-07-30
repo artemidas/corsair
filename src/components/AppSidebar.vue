@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { BookCheck, Box, Hexagon, Moon, Plus, Sun, Trash2 } from "@lucide/vue";
+import { RouterLink, useRoute } from "vue-router";
 import {
   Sidebar,
   SidebarContent,
@@ -18,8 +19,6 @@ import { Button } from "@/components/ui/button";
 import { useProjects, type Project } from "@/composables/useProjects";
 import {
   useCustomRules,
-  isBuiltIn,
-  type CustomRule,
 } from "@/composables/useCustomRules";
 import { useTheme } from "@/composables/useTheme";
 import { confirm } from "@tauri-apps/plugin-dialog";
@@ -28,75 +27,40 @@ const emit = defineEmits<{
   new: [];
   edit: [project: Project];
   newRule: [];
-  editRule: [rule: CustomRule];
-  selectRule: [rule: CustomRule];
 }>();
 
 const {
   projects,
-  selectedProjectId,
-  selectProject,
-  deleteProject,
   loading,
   loadError,
+  deleteProject,
 } = useProjects();
 
 const {
-  rules,
   userRules,
-  loading: rulesLoading,
-  loadError: rulesLoadError,
-  deleteRule,
 } = useCustomRules();
 
 const { theme, toggleTheme } = useTheme();
+
+const route = useRoute();
 
 function iconFor(kind: Project["kind"]) {
   return kind === "kubernetesClusterReview" ? Hexagon : Box;
 }
 
-const selectedRuleId = defineModel<string | null>("selectedRuleId", { default: null });
-
-function selectRule(rule: CustomRule) {
-  selectedRuleId.value = rule.id;
-  selectProject(null);
-  emit("selectRule", rule);
-}
-
-function selectProjectAndClearRule(id: string | null) {
-  selectedRuleId.value = null;
-  selectProject(id);
-}
-
 async function onDelete(p: Project, ev: Event) {
   ev.stopPropagation();
   ev.preventDefault();
-  const confirmed = await confirm(`Delete project "${p.name}"?`, { title: "Tauri", kind: "warning" });
+  const confirmed = await confirm(`Delete project "${p.name}"?`, {
+    title: "Tauri",
+    kind: "warning",
+  });
   if (!confirmed) return;
   try {
     await deleteProject(p.id);
   } catch (err) {
     alert(String(err));
     console.error("Failed to delete project:", err);
-  }
-}
-
-async function onDeleteRule(rule: CustomRule, ev: Event) {
-  ev.stopPropagation();
-  ev.preventDefault();
-  const confirmed = await confirm(`Delete rule "${rule.title}"?`, {
-    title: "Tauri",
-    kind: "warning",
-  });
-  if (!confirmed) return;
-  try {
-    await deleteRule(rule.id);
-    if (selectedRuleId.value === rule.id) {
-      selectedRuleId.value = null;
-    }
-  } catch (err) {
-    alert(String(err));
-    console.error("Failed to delete rule:", err);
   }
 }
 </script>
@@ -113,54 +77,23 @@ async function onDeleteRule(rule: CustomRule, ev: Event) {
     <SidebarContent>
       <SidebarGroup>
         <SidebarGroupLabel>Rules</SidebarGroupLabel>
-        <SidebarGroupAction title="New rule" @click="emit('newRule')">
-          <Plus />
-          <span class="sr-only">New rule</span>
-        </SidebarGroupAction>
         <SidebarGroupContent>
-          <div
-            v-if="rulesLoadError"
-            class="rounded-md p-2 text-xs text-destructive"
-          >
-            {{ rulesLoadError }}
-          </div>
-          <div
-            v-else-if="rulesLoading && rules.length === 0"
-            class="px-2 py-2 text-xs text-muted-foreground"
-          >
-            Loading…
-          </div>
-          <div
-            v-else-if="rules.length === 0"
-            class="px-2 py-2 text-xs text-muted-foreground"
-          >
-            No rules yet. Click + to add one.
-          </div>
-          <SidebarMenu v-else>
-            <SidebarMenuItem v-for="r in rules" :key="r.id">
-              <SidebarMenuButton
-                :is-active="selectedRuleId === r.id"
-                :tooltip="`${r.title} (${r.severity})`"
-                @click="selectRule(r)"
-              >
-                <BookCheck />
-                <span class="truncate">{{ r.title }}</span>
-                <span
-                  v-if="isBuiltIn(r)"
-                  class="badge badge-xs badge-outline ml-auto shrink-0"
-                >
-                  built-in
-                </span>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child :is-active="route.name === 'rules'">
+                <RouterLink to="/rules/built-in">
+                  <BookCheck />
+                  <span class="truncate">Built-in rules</span>
+                </RouterLink>
               </SidebarMenuButton>
-              <SidebarMenuAction
-                v-if="!isBuiltIn(r)"
-                show-on-hover
-                title="Delete rule"
-                @click="onDeleteRule(r, $event)"
-              >
-                <Trash2 />
-                <span class="sr-only">Delete</span>
-              </SidebarMenuAction>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton as-child :is-active="route.name === 'custom-rule'">
+                <RouterLink to="/rules/custom">
+                  <BookCheck />
+                  <span class="truncate">Custom rules</span>
+                </RouterLink>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
@@ -187,19 +120,21 @@ async function onDeleteRule(rule: CustomRule, ev: Event) {
           </div>
           <div
             v-else-if="projects.length === 0"
-            class="px-2 py-2 text-xs text-muted-foreground"
+            class="px-2 py-2 text-xs text-base-content/50"
           >
             No projects yet. Click + to add one.
           </div>
           <SidebarMenu v-else>
             <SidebarMenuItem v-for="p in projects" :key="p.id">
               <SidebarMenuButton
-                :is-active="selectedProjectId === p.id && selectedRuleId === null"
+                as-child
+                :is-active="route.name === 'project' && route.params.id === p.id"
                 :tooltip="p.name"
-                @click="selectProjectAndClearRule(p.id)"
               >
-                <component :is="iconFor(p.kind)" />
-                <span class="truncate">{{ p.name }}</span>
+                <RouterLink :to="{ name: 'project', params: { id: p.id } }">
+                  <component :is="iconFor(p.kind)" />
+                  <span class="truncate">{{ p.name }}</span>
+                </RouterLink>
               </SidebarMenuButton>
               <SidebarMenuAction
                 show-on-hover

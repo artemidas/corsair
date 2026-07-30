@@ -1,4 +1,4 @@
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
 export type ProjectKind = "kubernetesClusterReview" | "containerImageReview";
@@ -28,16 +28,11 @@ interface Connection {
 }
 
 const projects = ref<Project[]>([]);
-const selectedProjectId = ref<string | null>(null);
 const loading = ref(false);
 const loadError = ref("");
 const connection = ref<Connection | null>(null);
 
 export function useProjects() {
-  const selectedProject = computed<Project | null>(
-    () => projects.value.find((p) => p.id === selectedProjectId.value) ?? null,
-  );
-
   async function loadProjects() {
     loading.value = true;
     loadError.value = "";
@@ -65,13 +60,6 @@ export function useProjects() {
   async function deleteProject(id: string) {
     await invoke("delete_project", { id });
     projects.value = projects.value.filter((p) => p.id !== id);
-    if (selectedProjectId.value === id) {
-      selectedProjectId.value = null;
-    }
-  }
-
-  function selectProject(id: string | null) {
-    selectedProjectId.value = id;
   }
 
   async function refreshConnection() {
@@ -89,8 +77,6 @@ export function useProjects() {
 
   return {
     projects,
-    selectedProjectId,
-    selectedProject,
     loading,
     loadError,
     connection,
@@ -98,7 +84,6 @@ export function useProjects() {
     createProject,
     updateProject,
     deleteProject,
-    selectProject,
     refreshConnection,
     setConnection,
     isConnectedTo,

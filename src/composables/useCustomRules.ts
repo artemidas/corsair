@@ -80,6 +80,10 @@ export function useCustomRules() {
     rules.value = rules.value.filter((r) => r.id !== id);
   }
 
+  function getRuleById(id: string): CustomRule | null {
+    return rules.value.find((r) => r.id === id) ?? null;
+  }
+
   return {
     rules,
     userRules,
@@ -90,5 +94,6 @@ export function useCustomRules() {
     createRule,
     updateRule,
     deleteRule,
+    getRuleById,
   };
 }
