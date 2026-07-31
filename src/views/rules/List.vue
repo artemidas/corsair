@@ -11,32 +11,20 @@ import {
 } from "@/composables/useCustomRules";
 import { confirm } from "@tauri-apps/plugin-dialog";
 
-const props = defineProps<{
-  source: "built-in" | "custom";
-}>();
-
 const router = useRouter();
 const { userRules, builtInRules, loading, loadError, deleteRule } = useCustomRules();
 
-const items = computed<CustomRule[]>(() =>
-  props.source === "built-in" ? builtInRules.value : userRules.value,
-);
-
-const title = computed(() => (props.source === "built-in" ? "Built-in rules" : "Custom rules"));
-const subtitle = computed(() =>
-  props.source === "built-in"
-    ? "Read-only rules shipped with Corsair. Curated against CIS Kubernetes Benchmark."
-    : "Your own simple matchers. Click a rule to see its details and run a scan.",
-);
+// User rules first — built-ins are read-only reference material.
+const items = computed<CustomRule[]>(() => [
+  ...userRules.value,
+  ...builtInRules.value,
+]);
 
 const editorOpen = ref(false);
 const editorTarget = ref<CustomRule | null>(null);
 
 function open(rule: CustomRule) {
-  router.push({
-    name: props.source === "built-in" ? "built-in-rule" : "custom-rule",
-    params: { id: rule.id },
-  });
+  router.push({ name: "rule", params: { id: rule.id } });
 }
 
 function openNew() {
@@ -73,10 +61,13 @@ const severityBadgeClass: Record<string, string> = {
       <div class="card-body gap-3">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h2 class="card-title">{{ title }}</h2>
-            <p class="text-sm text-base-content/60">{{ subtitle }}</p>
+            <h2 class="card-title">Rules</h2>
+            <p class="text-sm text-base-content/60">
+              Your own matchers plus the built-in checks that ship with Corsair.
+              Built-in rules are read-only.
+            </p>
           </div>
-          <Button v-if="source === 'custom'" size="sm" @click="openNew">
+          <Button size="sm" @click="openNew">
             <Plus class="size-4" />
             New rule
           </Button>
@@ -95,12 +86,7 @@ const severityBadgeClass: Record<string, string> = {
           v-else-if="items.length === 0"
           class="py-6 text-sm text-base-content/50"
         >
-          <template v-if="source === 'built-in'">
-            No built-in rules loaded.
-          </template>
-          <template v-else>
-            No custom rules yet. Click "New rule" to add one.
-          </template>
+          No rules yet. Click "New rule" to add one.
         </div>
 
         <ul v-else class="flex flex-col gap-2">
@@ -118,7 +104,7 @@ const severityBadgeClass: Record<string, string> = {
                   v-if="isBuiltIn(r)"
                   class="badge badge-xs badge-outline shrink-0"
                 >
-                  built-in
+                  Built-in
                 </span>
               </div>
               <div

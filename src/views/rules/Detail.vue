@@ -1,20 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import { useCustomRules, type CustomRule } from "@/composables/useCustomRules";
 import { RuleDetail, RuleEditor } from "@/components/rule";
 
-const route = useRoute();
+const props = defineProps<{
+  id: string;
+}>();
+
 const router = useRouter();
-const { getRuleById } = useCustomRules();
+const { getRuleById, loading } = useCustomRules();
 
-const source = computed<"built-in" | "custom">(
-  () => (route.meta.source as "built-in" | "custom") ?? "custom",
-);
-
-const rule = computed<CustomRule | null>(
-  () => getRuleById(route.params.id as string),
-);
+const rule = computed<CustomRule | null>(() => getRuleById(props.id));
 
 const editorOpen = ref(false);
 
@@ -23,7 +20,7 @@ function openEdit() {
 }
 
 function onBack() {
-  router.push({ name: source.value === "built-in" ? "built-in-rules" : "custom-rules" });
+  router.push({ name: "rules" });
 }
 
 // Re-reset the editor target when the route changes so the modal opens
@@ -47,12 +44,13 @@ watch(
       @edit="openEdit"
       @back="onBack"
     />
+    <div v-else-if="loading" class="text-sm text-muted-foreground">Loading…</div>
     <div v-else class="card bg-base-100 shadow">
       <div class="card-body items-center text-center text-base-content/50">
         <h2 class="card-title text-base-content">Rule not found</h2>
         <p>
           The rule
-          <span class="font-mono">{{ route.params.id }}</span>
+          <span class="font-mono">{{ id }}</span>
           doesn't exist anymore.
         </p>
         <button class="btn btn-sm btn-ghost mt-2" @click="onBack">Back to rules</button>
