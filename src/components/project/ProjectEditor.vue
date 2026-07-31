@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { computed, ref, watch } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import { z } from "zod";
@@ -30,8 +29,6 @@ const emit = defineEmits<{
   created: [id: string];
 }>();
 
-const router = useRouter();
-const dialogRef = ref<HTMLDialogElement | null>(null);
 const { createProject, updateProject } = useProjects();
 
 const isEdit = computed(() => props.project !== null);
@@ -77,11 +74,11 @@ async function submitProject(values: ProjectFormValues) {
     };
     if (isEdit.value && props.project) {
       await updateProject(props.project.id, input);
+      emit("close");
     } else {
       const created = await createProject(input);
-      router.push({ name: "project", params: { id: created.id } });
+      emit("created", created.id);
     }
-    close();
   } catch (err) {
     console.error("Failed to save project:", err);
     submitError.value = err instanceof Error ? err.message : String(err);
@@ -130,63 +127,50 @@ watch(
   { immediate: true },
 );
 
-onMounted(() => {
-  dialogRef.value?.showModal();
-});
-
-function close() {
-  dialogRef.value?.close();
-  emit("close");
-}
 </script>
 
 <template>
-  <dialog ref="dialogRef" class="modal" @close="emit('close')">
-    <div class="modal-box max-w-lg">
-      <h3 class="text-lg font-bold">{{ title }}</h3>
-
-      <Stepper v-if="!isEdit" v-model="currentStep" class="mt-4 mb-2 flex w-full items-start gap-2">
-        <StepperItem :step="1">
+  <div>
+    <h3 class="text-lg font-bold">{{ title }}</h3>
+    <div class="flex flex-col items-center">  
+      <Stepper v-if="!isEdit" v-model="currentStep" class="flex w-10/12 items-start gap-2">
+        <StepperItem :step="1" class="relative flex w-full flex-col items-center justify-center">
           <StepperTrigger>
-            <StepperIndicator>1</StepperIndicator>
-            <div class="text-left">
+            <StepperIndicator class="bg-muted">1</StepperIndicator>
+            <div class="flex flex-col items-center">
               <StepperTitle>Kind</StepperTitle>
               <StepperDescription>Pick a project type</StepperDescription>
             </div>
           </StepperTrigger>
           <StepperSeparator/>
         </StepperItem>
-        <StepperItem :step="2">
+        <StepperItem :step="2" class="relative flex w-full flex-col items-center justify-center">
           <StepperTrigger>
-            <StepperIndicator>2</StepperIndicator>
-            <div class="text-left">
+            <StepperIndicator class="bg-muted">2</StepperIndicator>
+            <div class="flex flex-col items-center">
               <StepperTitle>Details</StepperTitle>
               <StepperDescription>Name and config</StepperDescription>
             </div>
           </StepperTrigger>
         </StepperItem>
       </Stepper>
-
-      <div
-        v-if="submitError"
-        class="alert alert-error mt-4 text-sm"
-        role="alert"
-      >
-        <span>{{ submitError }}</span>
-      </div>
-
-      <ProjectKindStep v-if="currentStep === 1" @select="selectKind" />
-      <ProjectDetailsStep
-        v-else
-        :is-edit="isEdit"
-        :is-submitting="isSubmitting"
-        @submit="submitProject"
-        @cancel="close"
-        @back="goBack"
-      />
     </div>
-    <form method="dialog" class="modal-backdrop">
-      <button>close</button>
-    </form>
-  </dialog>
+    <div
+      v-if="submitError"
+      class="alert alert-error mt-4 text-sm"
+      role="alert"
+    >
+      <span>{{ submitError }}</span>
+    </div>
+
+    <ProjectKindStep v-if="currentStep === 1" @select="selectKind" />
+    <ProjectDetailsStep
+      v-else
+      :is-edit="isEdit"
+      :is-submitting="isSubmitting"
+      @submit="submitProject"
+      @cancel="emit('close')"
+      @back="goBack"
+    />
+  </div>
 </template>

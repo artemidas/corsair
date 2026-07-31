@@ -33,7 +33,7 @@ function imageToName(image: string): string {
 
 async function onSubmit() {
   if (
-    isK8s &&
+    !isK8s.value &&
     !values.name?.trim() &&
     values.image?.trim()
   ) {
