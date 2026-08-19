@@ -3,6 +3,8 @@ import { computed } from "vue";
 import { useFormContext } from "vee-validate";
 import { ArrowLeft, Box, Hexagon } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import FormKubernetesCluster from "./FormKubernetesCluster.vue";
 import FormContainerImage from "./FormContainerImage.vue";
 import type { ProjectFormValues } from "./types";
@@ -22,8 +24,6 @@ const { values, setFieldValue, validate } = useFormContext<ProjectFormValues>();
 
 const isK8s = computed(() => values.kind === "kubernetesClusterReview");
 
-// Image projects don't have a user-typed name; derive one from the image
-// reference (e.g. `nginx:1.27` -> `nginx`, `ghcr.io/org/app:latest` -> `app`).
 function imageToName(image: string): string {
   const lastSlash = image.lastIndexOf("/");
   const lastPart = lastSlash >= 0 ? image.slice(lastSlash + 1) : image;
@@ -32,11 +32,7 @@ function imageToName(image: string): string {
 }
 
 async function onSubmit() {
-  if (
-    !isK8s.value &&
-    !values.name?.trim() &&
-    values.image?.trim()
-  ) {
+  if (!isK8s.value && !values.name?.trim() && values.image?.trim()) {
     setFieldValue("name", imageToName(values.image));
   }
   const result = await validate();
@@ -47,40 +43,41 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="mt-4 flex flex-col gap-4">
+  <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
+    <div
+      v-if="!isEdit"
+      class="flex items-center gap-2 text-sm text-muted-foreground"
+    >
+      <component :is="isK8s ? Hexagon : Box" class="size-4" />
+      <span>
+        {{ isK8s ? "Kubernetes cluster review" : "Container image review" }}
+      </span>
+    </div>
 
-    <form @submit.prevent="onSubmit">
-      <div  
+    <FormKubernetesCluster v-if="isK8s" />
+    <FormContainerImage v-else />
+
+    <div
+      :class="
+        cn(
+          'mt-2 flex items-center',
+          isEdit ? 'justify-end' : 'justify-between',
+        )
+      "
+    >
+      <Button
         v-if="!isEdit"
-        class="flex items-center gap-2 text-sm text-muted-foreground"
+        type="button"
+        variant="ghost"
+        @click="emit('back')"
       >
-        <component :is="isK8s ? Hexagon : Box" class="size-4" />
-        <span>
-          {{ isK8s ? "Kubernetes cluster review" : "Container image review" }}
-        </span>
-      </div>
-
-      <FormKubernetesCluster v-if="isK8s" />
-      <FormContainerImage v-else />
-
-      <div class="modal-action mt-2">
-        <Button
-          v-if="!isEdit"
-          type="button"
-          class="self-start -ml-3"
-          @click="emit('back')"
-        >
-          <ArrowLeft class="size-4" />
-          Back
-        </Button>
-        <Button type="submit" :disabled="isSubmitting">
-          <span
-            v-if="isSubmitting"
-            class="loading loading-spinner loading-sm"
-          ></span>
-          {{ isEdit ? "Save" : "Create" }}
-        </Button>
-      </div>
-    </form>
-  </div>
+        <ArrowLeft />
+        Back
+      </Button>
+      <Button type="submit" :disabled="isSubmitting">
+        <Spinner v-if="isSubmitting" />
+        {{ isEdit ? "Save" : "Create" }}
+      </Button>
+    </div>
+  </form>
 </template>

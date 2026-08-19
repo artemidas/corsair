@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { Box } from "@lucide/vue";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { ProjectEditor } from "@/components/project";
 import { useProjects, type Project } from "@/composables/useProjects";
 
@@ -25,12 +35,22 @@ function back() {
 
   <div v-else-if="loading" class="text-sm text-muted-foreground">Loading…</div>
 
-  <div v-else class="card bg-base-100 shadow">
-    <div class="card-body items-center text-center text-base-content/50">
-      <h2 class="card-title text-base-content">Project not found</h2>
-      <button class="btn btn-sm btn-ghost mt-2" @click="router.push({ name: 'projects' })">
+  <Empty v-else>
+    <EmptyHeader>
+      <EmptyMedia variant="icon">
+        <Box />
+      </EmptyMedia>
+      <EmptyTitle>Project not found</EmptyTitle>
+      <EmptyDescription>
+        The project
+        <span class="font-mono">{{ id }}</span>
+        doesn't exist anymore.
+      </EmptyDescription>
+    </EmptyHeader>
+    <EmptyContent>
+      <Button variant="ghost" size="sm" @click="router.push({ name: 'projects' })">
         Back to projects
-      </button>
-    </div>
-  </div>
+      </Button>
+    </EmptyContent>
+  </Empty>
 </template>

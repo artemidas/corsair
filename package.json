@@ -10,7 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@lucide/vue": "^1.27.0",
+    "@lucide/vue": "^1.33.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.7.2",
@@ -20,8 +20,7 @@
     "@vueuse/core": "^14.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "daisyui": "^5.7.4",
-    "reka-ui": "^2.10.1",
+    "reka-ui": "^2.10.3",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
     "vee-validate": "^4.15.1",

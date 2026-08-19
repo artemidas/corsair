@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { CircleAlert } from "@lucide/vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import { z } from "zod";
@@ -12,6 +13,8 @@ import {
   StepperTitle,
   StepperTrigger,
 } from "@/components/ui/stepper";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useProjects,
   type Project,
@@ -126,51 +129,59 @@ watch(
   () => reset(),
   { immediate: true },
 );
-
 </script>
 
 <template>
-  <div>
-    <h3 class="text-lg font-bold">{{ title }}</h3>
-    <div class="flex flex-col items-center">  
-      <Stepper v-if="!isEdit" v-model="currentStep" class="flex w-10/12 items-start gap-2">
-        <StepperItem :step="1" class="relative flex w-full flex-col items-center justify-center">
-          <StepperTrigger>
-            <StepperIndicator class="bg-muted">1</StepperIndicator>
-            <div class="flex flex-col items-center">
-              <StepperTitle>Kind</StepperTitle>
-              <StepperDescription>Pick a project type</StepperDescription>
-            </div>
-          </StepperTrigger>
-          <StepperSeparator/>
-        </StepperItem>
-        <StepperItem :step="2" class="relative flex w-full flex-col items-center justify-center">
-          <StepperTrigger>
-            <StepperIndicator class="bg-muted">2</StepperIndicator>
-            <div class="flex flex-col items-center">
-              <StepperTitle>Details</StepperTitle>
-              <StepperDescription>Name and config</StepperDescription>
-            </div>
-          </StepperTrigger>
-        </StepperItem>
-      </Stepper>
-    </div>
-    <div
-      v-if="submitError"
-      class="alert alert-error mt-4 text-sm"
-      role="alert"
-    >
-      <span>{{ submitError }}</span>
-    </div>
+  <Card>
+    <CardHeader>
+      <CardTitle>{{ title }}</CardTitle>
+    </CardHeader>
+    <CardContent class="flex flex-col gap-4">
+      <div v-if="!isEdit" class="flex flex-col items-center">
+        <Stepper v-model="currentStep" class="flex w-10/12 items-start gap-2">
+          <StepperItem
+            :step="1"
+            class="relative flex w-full flex-col items-center justify-center"
+          >
+            <StepperTrigger>
+              <StepperIndicator class="bg-muted">1</StepperIndicator>
+              <div class="flex flex-col items-center">
+                <StepperTitle>Kind</StepperTitle>
+                <StepperDescription>Pick a project type</StepperDescription>
+              </div>
+            </StepperTrigger>
+            <StepperSeparator />
+          </StepperItem>
+          <StepperItem
+            :step="2"
+            class="relative flex w-full flex-col items-center justify-center"
+          >
+            <StepperTrigger>
+              <StepperIndicator class="bg-muted">2</StepperIndicator>
+              <div class="flex flex-col items-center">
+                <StepperTitle>Details</StepperTitle>
+                <StepperDescription>Name and config</StepperDescription>
+              </div>
+            </StepperTrigger>
+          </StepperItem>
+        </Stepper>
+      </div>
 
-    <ProjectKindStep v-if="currentStep === 1" @select="selectKind" />
-    <ProjectDetailsStep
-      v-else
-      :is-edit="isEdit"
-      :is-submitting="isSubmitting"
-      @submit="submitProject"
-      @cancel="emit('close')"
-      @back="goBack"
-    />
-  </div>
+      <Alert v-if="submitError" variant="destructive">
+        <CircleAlert />
+        <AlertTitle>Could not save project</AlertTitle>
+        <AlertDescription>{{ submitError }}</AlertDescription>
+      </Alert>
+
+      <ProjectKindStep v-if="currentStep === 1" @select="selectKind" />
+      <ProjectDetailsStep
+        v-else
+        :is-edit="isEdit"
+        :is-submitting="isSubmitting"
+        @submit="submitProject"
+        @cancel="emit('close')"
+        @back="goBack"
+      />
+    </CardContent>
+  </Card>
 </template>

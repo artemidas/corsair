@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Box, Hexagon } from "@lucide/vue";
 import type { ProjectKind } from "@/composables/useProjects";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const emit = defineEmits<{
   select: [kind: ProjectKind];
@@ -8,43 +14,47 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="mt-4 flex flex-col gap-3">
+  <div class="flex flex-col gap-3">
     <p class="text-sm text-muted-foreground">
       What kind of project do you want to create?
     </p>
-    <button
-      type="button"
-      class="group flex items-start gap-3 rounded-lg border border-input p-4 text-left transition-colors hover:border-primary hover:bg-primary/5"
+    <Card
+      class="cursor-pointer py-4 transition-colors hover:bg-accent/50"
+      role="button"
+      tabindex="0"
       @click="emit('select', 'kubernetesClusterReview')"
+      @keydown.enter="emit('select', 'kubernetesClusterReview')"
     >
-      <div
-        class="rounded-md bg-primary/10 p-2 text-primary transition-colors group-hover:bg-primary/20"
-      >
-        <Hexagon class="size-5" />
-      </div>
-      <div>
-        <div class="text-sm font-medium">Kubernetes cluster review</div>
-        <div class="text-xs text-muted-foreground">
-          Connect to a live cluster and scan it for misconfigurations.
+      <CardHeader class="flex flex-row items-start gap-3">
+        <div class="rounded-md bg-muted p-2 text-muted-foreground">
+          <Hexagon class="size-5" />
         </div>
-      </div>
-    </button>
-    <button
-      type="button"
-      class="group flex items-start gap-3 rounded-lg border border-input p-4 text-left transition-colors hover:border-secondary hover:bg-secondary/5"
+        <div>
+          <CardTitle>Kubernetes cluster review</CardTitle>
+          <CardDescription>
+            Connect to a live cluster and scan it for misconfigurations.
+          </CardDescription>
+        </div>
+      </CardHeader>
+    </Card>
+    <Card
+      class="cursor-pointer py-4 transition-colors hover:bg-accent/50"
+      role="button"
+      tabindex="0"
       @click="emit('select', 'containerImageReview')"
+      @keydown.enter="emit('select', 'containerImageReview')"
     >
-      <div
-        class="rounded-md bg-secondary/10 p-2 text-secondary transition-colors group-hover:bg-secondary/20"
-      >
-        <Box class="size-5" />
-      </div>
-      <div>
-        <div class="text-sm font-medium">Container image review</div>
-        <div class="text-xs text-muted-foreground">
-          Inspect a container image for risks.
+      <CardHeader class="flex flex-row items-start gap-3">
+        <div class="rounded-md bg-muted p-2 text-muted-foreground">
+          <Box class="size-5" />
         </div>
-      </div>
-    </button>
+        <div>
+          <CardTitle>Container image review</CardTitle>
+          <CardDescription>
+            Inspect a container image for risks.
+          </CardDescription>
+        </div>
+      </CardHeader>
+    </Card>
   </div>
 </template>

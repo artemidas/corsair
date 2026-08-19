@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
+import { CircleAlert } from "@lucide/vue";
 import {
   RESOURCE_TYPES,
   type CustomRule,
@@ -8,6 +9,23 @@ import {
 } from "@/composables/useCustomRules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   FormControl,
   FormField,
@@ -27,8 +45,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: [];
 }>();
-
-const dialogRef = ref<HTMLDialogElement | null>(null);
 
 const { createRule, updateRule } = useCustomRules();
 
@@ -107,42 +123,48 @@ watch(
   { immediate: true },
 );
 
-onMounted(() => {
-  dialogRef.value?.showModal();
-});
-
 function close() {
-  dialogRef.value?.close();
   emit("close");
+}
+
+function onOpenChange(open: boolean) {
+  if (!open) close();
 }
 </script>
 
 <template>
-  <dialog ref="dialogRef" class="modal" @close="emit('close')">
-    <div class="modal-box max-w-lg">
-      <h3 class="text-lg font-bold">{{ title }}</h3>
+  <Dialog :open="true" @update:open="onOpenChange">
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{{ title }}</DialogTitle>
+      </DialogHeader>
 
-      <div v-if="submitError" class="alert alert-error mt-4 text-sm" role="alert">
-        <span>{{ submitError }}</span>
-      </div>
+      <Alert v-if="submitError" variant="destructive">
+        <CircleAlert />
+        <AlertTitle>Could not save rule</AlertTitle>
+        <AlertDescription>{{ submitError }}</AlertDescription>
+      </Alert>
 
-      <form class="mt-4 flex flex-col gap-4" @submit.prevent="onSubmit">
-        <FormField v-slot="{ field }" name="title">
+      <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
+        <FormField v-slot="{ componentField }" name="title">
           <FormItem>
             <FormLabel>Title</FormLabel>
             <FormControl>
-              <Input v-bind="field" placeholder="No privileged containers" />
+              <Input
+                v-bind="componentField"
+                placeholder="No privileged containers"
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
         </FormField>
 
-        <FormField v-slot="{ field }" name="description">
+        <FormField v-slot="{ componentField }" name="description">
           <FormItem>
             <FormLabel>Description</FormLabel>
             <FormControl>
               <Input
-                v-bind="field"
+                v-bind="componentField"
                 placeholder="Optional — what's the impact of this check?"
               />
             </FormControl>
@@ -150,45 +172,53 @@ function close() {
         </FormField>
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <FormField v-slot="{ field }" name="severity">
+          <FormField v-slot="{ componentField }" name="severity">
             <FormItem>
               <FormLabel>Severity</FormLabel>
-              <FormControl>
-                <select
-                  v-bind="field"
-                  class="select select-bordered w-full"
-                  :value="field.value"
-                  @change="(e) => field.onChange((e.target as HTMLSelectElement).value)"
-                >
-                  <option value="critical">critical</option>
-                  <option value="high">high</option>
-                  <option value="medium">medium</option>
-                  <option value="low">low</option>
-                </select>
-              </FormControl>
+              <Select v-bind="componentField">
+                <FormControl>
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="Select severity" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="critical">critical</SelectItem>
+                    <SelectItem value="high">high</SelectItem>
+                    <SelectItem value="medium">medium</SelectItem>
+                    <SelectItem value="low">low</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </FormItem>
           </FormField>
 
-          <FormField v-slot="{ field }" name="resourceType">
+          <FormField v-slot="{ componentField }" name="resourceType">
             <FormItem>
               <FormLabel>Resource</FormLabel>
-              <FormControl>
-                <select
-                  v-bind="field"
-                  class="select select-bordered w-full"
-                  :value="field.value"
-                  @change="(e) => field.onChange((e.target as HTMLSelectElement).value)"
-                >
-                  <option v-for="r in RESOURCE_TYPES" :key="r" :value="r">
-                    {{ r }}
-                  </option>
-                </select>
-              </FormControl>
+              <Select v-bind="componentField">
+                <FormControl>
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="Select resource" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem
+                      v-for="r in RESOURCE_TYPES"
+                      :key="r"
+                      :value="r"
+                    >
+                      {{ r }}
+                    </SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </FormItem>
           </FormField>
         </div>
 
-        <FormField v-slot="{ field }" name="fieldPath">
+        <FormField v-slot="{ componentField }" name="fieldPath">
           <FormItem>
             <FormLabel>
               Field path
@@ -198,7 +228,7 @@ function close() {
             </FormLabel>
             <FormControl>
               <Input
-                v-bind="field"
+                v-bind="componentField"
                 placeholder="spec.containers[*].securityContext.privileged"
                 class="font-mono"
               />
@@ -207,12 +237,12 @@ function close() {
           </FormItem>
         </FormField>
 
-        <FormField v-slot="{ field }" name="expectedValue">
+        <FormField v-slot="{ componentField }" name="expectedValue">
           <FormItem>
             <FormLabel>Expected value</FormLabel>
             <FormControl>
               <Input
-                v-bind="field"
+                v-bind="componentField"
                 placeholder="true"
                 class="font-mono"
               />
@@ -221,7 +251,7 @@ function close() {
           </FormItem>
         </FormField>
 
-        <div class="modal-action mt-2">
+        <DialogFooter>
           <Button
             type="button"
             variant="ghost"
@@ -231,14 +261,11 @@ function close() {
             Cancel
           </Button>
           <Button type="submit" :disabled="isSubmitting">
-            <span v-if="isSubmitting" class="loading loading-spinner loading-sm"></span>
+            <Spinner v-if="isSubmitting" />
             {{ isEdit ? "Save" : "Create" }}
           </Button>
-        </div>
+        </DialogFooter>
       </form>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button>close</button>
-    </form>
-  </dialog>
+    </DialogContent>
+  </Dialog>
 </template>

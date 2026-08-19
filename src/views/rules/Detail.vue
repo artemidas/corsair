@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+import { BookCheck } from "@lucide/vue";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { useCustomRules, type CustomRule } from "@/composables/useCustomRules";
 import { RuleDetail, RuleEditor } from "@/components/rule";
 
@@ -23,8 +33,6 @@ function onBack() {
   router.push({ name: "rules" });
 }
 
-// Re-reset the editor target when the route changes so the modal opens
-// for the right rule.
 const editorTarget = ref<CustomRule | null>(null);
 watch(
   () => rule.value?.id,
@@ -45,17 +53,22 @@ watch(
       @back="onBack"
     />
     <div v-else-if="loading" class="text-sm text-muted-foreground">Loading…</div>
-    <div v-else class="card bg-base-100 shadow">
-      <div class="card-body items-center text-center text-base-content/50">
-        <h2 class="card-title text-base-content">Rule not found</h2>
-        <p>
+    <Empty v-else>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <BookCheck />
+        </EmptyMedia>
+        <EmptyTitle>Rule not found</EmptyTitle>
+        <EmptyDescription>
           The rule
           <span class="font-mono">{{ id }}</span>
           doesn't exist anymore.
-        </p>
-        <button class="btn btn-sm btn-ghost mt-2" @click="onBack">Back to rules</button>
-      </div>
-    </div>
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button variant="ghost" size="sm" @click="onBack">Back to rules</Button>
+      </EmptyContent>
+    </Empty>
 
     <RuleEditor
       v-if="editorOpen && editorTarget"

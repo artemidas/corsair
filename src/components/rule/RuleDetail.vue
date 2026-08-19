@@ -1,12 +1,37 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { ArrowLeft, Trash2, TriangleAlert } from "@lucide/vue";
+import { ArrowLeft, CircleAlert, ScanSearch, Trash2, TriangleAlert } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useCustomRules, isBuiltIn, type CustomRule } from "@/composables/useCustomRules";
 import { useProjects, type Project } from "@/composables/useProjects";
-
-type Severity = "critical" | "high" | "medium" | "low";
+import { severityBadgeVariant, type Severity } from "@/lib/severity";
 
 interface Finding {
   id: string;
@@ -86,20 +111,13 @@ const contextMatches = computed(() => {
     props.rule.resourceType === "ServiceAccount" ||
     props.rule.resourceType === "Role" ||
     props.rule.resourceType === "RoleBinding";
-  if (!want) return true; // cluster-scoped resources always match
+  if (!want) return true;
   return activeContext.value.context === (props.selectedProject?.config.context ?? null);
 });
 
 const matchingFindings = computed(() =>
   findings.value.filter((f) => f.ruleId === props.rule.id),
 );
-
-const severityBadgeClass: Record<string, string> = {
-  critical: "bg-red-600 text-white",
-  high: "bg-orange-500 text-white",
-  medium: "bg-yellow-400 text-black",
-  low: "bg-gray-400 text-black",
-};
 
 async function onDelete() {
   if (
@@ -135,80 +153,84 @@ watch(
       type="button"
       variant="ghost"
       size="sm"
-      class="self-start -ml-3"
+      class="-ml-3 self-start"
       @click="emit('back')"
     >
-      <ArrowLeft class="size-4" />
+      <ArrowLeft />
       Back to rules
     </Button>
 
-    <div class="card bg-base-100 shadow">
-      <div class="card-body">
-        <div class="flex items-start justify-between gap-4">
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-base-content/50">
-              <span v-if="builtIn" class="badge badge-sm badge-outline">Built-in</span>
-              <span v-else class="badge badge-sm badge-outline badge-primary">User</span>
-              <span class="font-mono">{{ rule.id }}</span>
-            </div>
-            <h2 class="card-title">{{ rule.title }}</h2>
-            <p v-if="rule.description" class="mt-1 text-sm text-base-content/60">
-              {{ rule.description }}
-            </p>
-          </div>
-          <div class="flex shrink-0 items-center gap-2">
-            <span class="badge" :class="severityBadgeClass[rule.severity]">
-              {{ rule.severity }}
-            </span>
-            <Button
-              v-if="!builtIn"
-              type="button"
-              variant="ghost"
-              size="sm"
-              @click="emit('edit', rule)"
-            >
-              Edit
-            </Button>
-            <Button
-              v-if="!builtIn"
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              class="text-error"
-              title="Delete rule"
-              @click="onDelete"
-            >
-              <Trash2 class="size-4" />
-            </Button>
-          </div>
+    <Card>
+      <CardHeader>
+        <div class="flex items-center gap-2">
+          <Badge v-if="builtIn" variant="outline">Built-in</Badge>
+          <Badge v-else variant="secondary">User</Badge>
+          <CardDescription class="font-mono">{{ rule.id }}</CardDescription>
         </div>
-      </div>
-    </div>
+        <CardTitle>{{ rule.title }}</CardTitle>
+        <CardDescription v-if="rule.description">
+          {{ rule.description }}
+        </CardDescription>
+        <CardAction class="flex items-center gap-2">
+          <Badge :variant="severityBadgeVariant(rule.severity)">
+            {{ rule.severity }}
+          </Badge>
+          <Button
+            v-if="!builtIn"
+            type="button"
+            variant="ghost"
+            size="sm"
+            @click="emit('edit', rule)"
+          >
+            Edit
+          </Button>
+          <Button
+            v-if="!builtIn"
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            class="text-destructive"
+            title="Delete rule"
+            @click="onDelete"
+          >
+            <Trash2 />
+          </Button>
+        </CardAction>
+      </CardHeader>
+    </Card>
 
-    <div class="card bg-base-100 shadow">
-      <div class="card-body">
-        <h3 class="card-title text-base">Check</h3>
+    <Card>
+      <CardHeader>
+        <CardTitle>Check</CardTitle>
+      </CardHeader>
+      <CardContent>
         <div class="grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
           <div>
-            <div class="text-xs uppercase tracking-wide text-base-content/50">Resource</div>
+            <div class="text-xs uppercase tracking-wide text-muted-foreground">
+              Resource
+            </div>
             <div class="mt-1 font-mono">{{ rule.resourceType }}</div>
           </div>
           <div class="md:col-span-2">
-            <div class="text-xs uppercase tracking-wide text-base-content/50">Field path</div>
+            <div class="text-xs uppercase tracking-wide text-muted-foreground">
+              Field path
+            </div>
             <div class="mt-1 font-mono">{{ rule.fieldPath }}</div>
           </div>
           <div>
-            <div class="text-xs uppercase tracking-wide text-base-content/50">Expected</div>
+            <div class="text-xs uppercase tracking-wide text-muted-foreground">
+              Expected
+            </div>
             <div class="mt-1 font-mono">{{ rule.expectedValue }}</div>
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
 
-    <div class="card bg-base-100 shadow">
-      <div class="card-body gap-3">
-        <div class="flex items-center justify-between">
-          <h3 class="card-title text-base">Findings for this rule</h3>
+    <Card>
+      <CardHeader>
+        <CardTitle>Findings for this rule</CardTitle>
+        <CardAction>
           <Button
             v-if="!isConnected"
             type="button"
@@ -216,7 +238,7 @@ watch(
             :disabled="connecting"
             @click="onConnect"
           >
-            <span v-if="connecting" class="loading loading-spinner loading-sm"></span>
+            <Spinner v-if="connecting" />
             Connect to cluster
           </Button>
           <Button
@@ -226,57 +248,71 @@ watch(
             :disabled="scanning"
             @click="runScan"
           >
-            <span v-if="scanning" class="loading loading-spinner loading-sm"></span>
+            <Spinner v-if="scanning" />
             Run scan
           </Button>
-        </div>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <Alert v-if="!isConnected">
+          <TriangleAlert />
+          <AlertTitle>Not connected</AlertTitle>
+          <AlertDescription>
+            Connect to a cluster to scan for findings.
+          </AlertDescription>
+        </Alert>
 
-        <div v-if="!isConnected" class="flex items-center gap-2 text-sm text-base-content/60">
-          <TriangleAlert class="size-4" />
-          Connect to a cluster to scan for findings.
-        </div>
+        <Alert v-else-if="contextMatches === false">
+          <TriangleAlert />
+          <AlertTitle>Context mismatch</AlertTitle>
+          <AlertDescription>
+            This rule applies to namespaced resources, but the active connection
+            uses a different context than the selected project.
+          </AlertDescription>
+        </Alert>
 
-        <div
-          v-else-if="contextMatches === false"
-          class="flex items-center gap-2 text-sm text-warning"
+        <Alert v-else-if="scanError" variant="destructive">
+          <CircleAlert />
+          <AlertTitle>Scan failed</AlertTitle>
+          <AlertDescription>{{ scanError }}</AlertDescription>
+        </Alert>
+
+        <Empty
+          v-else-if="matchingFindings.length === 0"
+          class="border-0 py-6 md:py-8"
         >
-          <TriangleAlert class="size-4" />
-          This rule applies to namespaced resources, but the active connection uses a different context than the selected project.
-        </div>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ScanSearch />
+            </EmptyMedia>
+            <EmptyTitle>No findings for this rule</EmptyTitle>
+            <EmptyDescription>Run a scan to check.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
 
-        <div v-else-if="scanError" class="alert alert-error text-sm">
-          Scan failed: {{ scanError }}
-        </div>
-
-        <div v-else-if="matchingFindings.length === 0" class="text-sm text-base-content/50">
-          No findings for this rule. Run a scan to check.
-        </div>
-
-        <div v-else class="overflow-x-auto">
-          <table class="table table-sm">
-            <thead>
-              <tr>
-                <th>Severity</th>
-                <th>Resource</th>
-                <th>Namespace</th>
-                <th>Message</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="f in matchingFindings" :key="f.id">
-                <td>
-                  <span class="badge badge-sm" :class="severityBadgeClass[f.severity]">
-                    {{ f.severity }}
-                  </span>
-                </td>
-                <td>{{ f.resourceKind }}/{{ f.resourceName }}</td>
-                <td>{{ f.namespace ?? "-" }}</td>
-                <td class="max-w-xl text-sm">{{ f.message }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+        <Table v-else>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Severity</TableHead>
+              <TableHead>Resource</TableHead>
+              <TableHead>Namespace</TableHead>
+              <TableHead>Message</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="f in matchingFindings" :key="f.id">
+              <TableCell>
+                <Badge :variant="severityBadgeVariant(f.severity)">
+                  {{ f.severity }}
+                </Badge>
+              </TableCell>
+              <TableCell>{{ f.resourceKind }}/{{ f.resourceName }}</TableCell>
+              <TableCell>{{ f.namespace ?? "-" }}</TableCell>
+              <TableCell class="max-w-xl">{{ f.message }}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   </div>
 </template>
