@@ -1,23 +1,16 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { RouterLink } from "vue-router";
-import { Hexagon, Unplug, CircleCheck } from "@lucide/vue";
+import { Unplug, CircleCheck } from "@lucide/vue";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { useCluster } from "@/composables/useCluster";
 
 const { status, isConnected, contextLabel } = useCluster();
-
-const pipClass = computed(() => {
-  if (isConnected.value) return "bg-foreground";
-  if (status.value.connected) return "bg-destructive";
-  return "bg-muted-foreground/50";
-});
 
 const label = computed(() => {
   if (isConnected.value) return contextLabel.value;
