@@ -7,10 +7,14 @@ import rulesRoutes from "./rules";
 import settingsRoutes from "./settings";
 
 const routes: RouteRecordRaw[] = [
-  { 
+  {
     path: "/",
     name: "home",
     component: HomeView,
+    meta: {
+      title: "Home",
+      nav: "home",
+    },
   },
   ...projectsRoutes,
   ...rulesRoutes,

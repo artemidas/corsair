@@ -57,6 +57,10 @@ export function useProjects() {
     projects.value = projects.value.filter((p) => p.id !== id);
   }
 
+  function getProjectById(id: string): Project | null {
+    return projects.value.find((p) => p.id === id) ?? null;
+  }
+
   return {
     projects,
     loading,
@@ -65,5 +69,6 @@ export function useProjects() {
     createProject,
     updateProject,
     deleteProject,
+    getProjectById,
   };
 }

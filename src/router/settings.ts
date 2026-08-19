@@ -9,6 +9,7 @@ const routes: RouteRecordRaw[] = [
     component: SettingsView,
     meta: {
       title: "Settings",
+      nav: "settings",
     },
   },
 ];

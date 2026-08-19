@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BookCheck, Box, HouseIcon, Moon, Settings, Sun } from "@lucide/vue";
-import { RouterLink, useRoute } from "vue-router";
+import { RouterLink } from "vue-router";
 import {
   Sidebar,
   SidebarContent,
@@ -15,12 +15,12 @@ import { Button } from "@/components/ui/button";
 import { useProjects } from "@/composables/useProjects";
 import { useCustomRules } from "@/composables/useCustomRules";
 import { useTheme } from "@/composables/useTheme";
+import { usePageHeader } from "@/composables/usePageHeader";
 
 const { projects } = useProjects();
 const { userRules } = useCustomRules();
 const { theme, toggleTheme } = useTheme();
-
-const route = useRoute();
+const { nav } = usePageHeader();
 </script>
 
 <template>
@@ -37,7 +37,7 @@ const route = useRoute();
 
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton as-child :is-active="route.name === 'home'">
+            <SidebarMenuButton as-child :is-active="nav === 'home'">
               <RouterLink to="/">
                 <HouseIcon />
                 <span class="truncate">Home</span>
@@ -48,7 +48,7 @@ const route = useRoute();
 
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton as-child :is-active="route.name === 'projects'">
+            <SidebarMenuButton as-child :is-active="nav === 'projects'">
               <RouterLink to="/projects">
                 <Box />
                 <span class="truncate">Projects</span>
@@ -59,7 +59,7 @@ const route = useRoute();
 
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton as-child :is-active="route.name === 'rules'">
+            <SidebarMenuButton as-child :is-active="nav === 'rules'">
               <RouterLink to="/rules">
                 <BookCheck />
                 <span class="truncate">Rules</span>
@@ -73,7 +73,7 @@ const route = useRoute();
     <SidebarFooter>
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton as-child :is-active="route.name === 'settings'">
+          <SidebarMenuButton as-child :is-active="nav === 'settings'">
             <RouterLink to="/settings">
               <Settings />
               <span class="truncate">Settings</span>

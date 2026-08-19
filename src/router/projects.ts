@@ -14,6 +14,7 @@ const routes: RouteRecordRaw[] = [
     component: ProjectList,
     meta: {
       title: "Projects",
+      nav: "projects",
     },
   },
   {
@@ -22,6 +23,7 @@ const routes: RouteRecordRaw[] = [
     component: ProjectCreate,
     meta: {
       title: "New Project",
+      nav: "projects",
     },
   },
   {
@@ -31,6 +33,7 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: {
       title: "Project",
+      nav: "projects",
     },
   },
   {
@@ -40,6 +43,7 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: {
       title: "Edit Project",
+      nav: "projects",
     },
   },
 ]

@@ -35,8 +35,7 @@ function subtitleFor(p: Project) {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex items-center justify-between">
-      <h1 class="text-xl font-semibold">Projects</h1>
+    <div class="flex items-center justify-end">
       <Button as-child size="sm">
         <RouterLink :to="{ name: 'new-project' }">
           <Plus />
