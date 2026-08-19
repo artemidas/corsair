@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { RouterLink } from "vue-router";
 import { Box, CircleAlert, CircleCheck, ScanSearch, TriangleAlert } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Item, ItemContent, ItemTitle, ItemDescription, ItemActions } from "@/components/ui/item";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardAction,
@@ -22,27 +22,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { FindingsDataTable } from "@/components/findings";
+import ScanHistorySelect from "./ScanHistorySelect.vue";
 import type { Project } from "@/composables/useProjects";
 import { useCluster } from "@/composables/useCluster";
-import { severityBadgeVariant, type Severity } from "@/lib/severity";
-
-interface Finding {
-  id: string;
-  ruleId: string;
-  severity: Severity;
-  resourceKind: string;
-  resourceName: string;
-  namespace: string | null;
-  message: string;
-}
+import { useScans } from "@/composables/useScans";
 
 const props = defineProps<{
   project: Project;
@@ -53,47 +37,61 @@ const emit = defineEmits<{
 }>();
 
 const { isConnected, status, contextLabel } = useCluster();
+const {
+  scansFor,
+  selectedScan,
+  selectedScanId,
+  findingsFor,
+  loadScans,
+  selectScan,
+  runScan: persistScan,
+} = useScans();
 
 const scanning = ref(false);
 const scanError = ref("");
-const findings = ref<Finding[]>([]);
-const hasScanned = ref(false);
+const loadingHistory = ref(false);
+const historyError = ref("");
 
 const isK8s = computed(() => props.project.kind === "kubernetesClusterReview");
+const scans = computed(() => scansFor(props.project.id));
+const currentScan = computed(() => selectedScan(props.project.id));
+const currentScanId = computed(() => selectedScanId(props.project.id));
+const findings = computed(() =>
+  currentScan.value ? findingsFor(currentScan.value.id) : [],
+);
 const contextMismatch = computed(() => {
   const pinned = props.project.config.context;
   if (!isK8s.value || !isConnected.value || !pinned) return false;
   return status.value.context !== pinned;
 });
 
-const severityOrder: Record<Severity, number> = {
-  critical: 0,
-  high: 1,
-  medium: 2,
-  low: 3,
-};
-const sortedFindings = computed(() =>
-  [...findings.value].sort(
-    (a, b) => severityOrder[a.severity] - severityOrder[b.severity],
-  ),
-);
-
 watch(
   () => props.project.id,
-  () => {
+  async (id) => {
     scanning.value = false;
     scanError.value = "";
-    findings.value = [];
-    hasScanned.value = false;
+    historyError.value = "";
+    loadingHistory.value = true;
+    try {
+      await loadScans(id);
+    } catch (err) {
+      historyError.value = String(err);
+    } finally {
+      loadingHistory.value = false;
+    }
   },
+  { immediate: true },
 );
+
+async function onSelectScan(scanId: string) {
+  await selectScan(props.project.id, scanId);
+}
 
 async function runScan() {
   scanning.value = true;
   scanError.value = "";
   try {
-    findings.value = await invoke<Finding[]>("run_scan");
-    hasScanned.value = true;
+    await persistScan(props.project.id);
   } catch (err) {
     scanError.value = String(err);
   } finally {
@@ -104,32 +102,6 @@ async function runScan() {
 
 <template>
   <div class="flex flex-col gap-4">
-    <Card>
-      <CardHeader>
-        <CardDescription class="uppercase tracking-wide">
-          {{ isK8s ? "Kubernetes cluster review" : "Container image review" }}
-        </CardDescription>
-        <CardTitle>{{ project.name }}</CardTitle>
-        <CardDescription>
-          <template v-if="isK8s">
-            Context:
-            <span class="font-mono">
-              {{ project.config.context ?? "<active context>" }}
-            </span>
-          </template>
-          <template v-else>
-            Image:
-            <span class="font-mono">{{ project.config.image }}</span>
-          </template>
-        </CardDescription>
-        <CardAction>
-          <Button variant="ghost" size="sm" @click="emit('edit', project)">
-            Edit
-          </Button>
-        </CardAction>
-      </CardHeader>
-    </Card>
-
     <template v-if="isK8s">
       <Alert v-if="!isConnected">
         <TriangleAlert />
@@ -158,85 +130,121 @@ async function runScan() {
         </AlertDescription>
       </Alert>
 
+      <Alert v-if="historyError" variant="destructive">
+        <CircleAlert />
+        <AlertTitle>Could not load scan history</AlertTitle>
+        <AlertDescription>{{ historyError }}</AlertDescription>
+      </Alert>
+
       <Alert v-if="scanError" variant="destructive">
         <CircleAlert />
         <AlertTitle>Scan failed</AlertTitle>
         <AlertDescription>{{ scanError }}</AlertDescription>
       </Alert>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Findings</CardTitle>
-          <CardAction>
-            <Button
-              variant="secondary"
-              size="sm"
-              :disabled="!isConnected || scanning"
-              @click="runScan"
-            >
-              <Spinner v-if="scanning" />
-              Run Scan
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <div
-            v-if="scanning"
-            class="flex items-center gap-2 py-6 text-muted-foreground"
+      <Item>
+        <ItemContent>
+          <ItemTitle>
+            <h3 class="scroll-m-20 text-2xl font-semibold tracking-tight">
+              {{ project.name }}
+            </h3>
+          </ItemTitle>
+          <ItemDescription class="line-clamp-none" v-if="currentScan">
+            <template v-if="currentScan.status === 'failed'">
+              This scan failed
+              <template v-if="currentScan.context">
+                on
+                <span class="font-mono">{{ currentScan.context }}</span>
+              </template>
+            </template>
+            <template v-else>
+              {{ currentScan.findingCount }}
+              {{ currentScan.findingCount === 1 ? "finding" : "findings" }}
+            </template>
+          </ItemDescription>
+        </ItemContent>
+      </Item>
+          
+      <Item>
+        <ItemContent>
+          <ItemTitle>
+            <h3 class="scroll-m-20 text-2xl font-semibold tracking-tight">
+              Scan history
+            </h3>
+          </ItemTitle>
+          <ItemDescription>
+            <template v-if="isK8s">
+              Context:
+              <span class="font-mono">
+                {{ project.config.context ?? "<active context>" }}
+              </span>
+            </template>
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions>
+          <ScanHistorySelect
+            v-if="scans.length && currentScanId"
+            :scans="scans"
+            :model-value="currentScanId"
+            @update:model-value="onSelectScan"
+          />
+          <Button
+            variant="secondary"
+            size="sm"
+            :disabled="!isConnected || scanning"
+            @click="runScan"
           >
-            <Spinner /> Scanning cluster…
-          </div>
+            <Spinner v-if="scanning" />
+            Run Scan
+          </Button>
+        </ItemActions>
+      </Item>
+      <div
+        v-if="scanning || loadingHistory"
+        class="flex items-center gap-2 py-6 text-muted-foreground"
+      >
+        <Spinner />
+        {{ scanning ? "Scanning cluster…" : "Loading scan history…" }}
+      </div>
 
-          <Empty v-else-if="!hasScanned" class="border-0 py-6 md:py-8">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <ScanSearch />
-              </EmptyMedia>
-              <EmptyTitle>No scan yet</EmptyTitle>
-              <EmptyDescription>
-                Connect in Settings, then run a scan to see findings.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+      <Empty v-else-if="!currentScan" class="border-0 py-6 md:py-8">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <ScanSearch />
+          </EmptyMedia>
+          <EmptyTitle>No scan yet</EmptyTitle>
+          <EmptyDescription>
+            Connect in Settings, then run a scan to see findings.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
 
-          <Empty v-else-if="findings.length === 0" class="border-0 py-6 md:py-8">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <CircleCheck />
-              </EmptyMedia>
-              <EmptyTitle>No findings</EmptyTitle>
-              <EmptyDescription>
-                The 4 fixed rules found nothing.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+      <Alert v-else-if="currentScan.status === 'failed'" variant="destructive">
+        <CircleAlert />
+        <AlertTitle>This scan failed</AlertTitle>
+        <AlertDescription>
+          {{ currentScan.error ?? "The cluster could not be evaluated." }}
+        </AlertDescription>
+      </Alert>
 
-          <Table v-else>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Severity</TableHead>
-                <TableHead>Rule</TableHead>
-                <TableHead>Resource</TableHead>
-                <TableHead>Namespace</TableHead>
-                <TableHead>Message</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-for="f in sortedFindings" :key="f.id">
-                <TableCell>
-                  <Badge :variant="severityBadgeVariant(f.severity)">
-                    {{ f.severity }}
-                  </Badge>
-                </TableCell>
-                <TableCell class="font-mono text-xs">{{ f.ruleId }}</TableCell>
-                <TableCell>{{ f.resourceKind }}/{{ f.resourceName }}</TableCell>
-                <TableCell>{{ f.namespace ?? "-" }}</TableCell>
-                <TableCell class="max-w-xl">{{ f.message }}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <Empty v-else-if="findings.length === 0" class="border-0 py-6 md:py-8">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <CircleCheck />
+          </EmptyMedia>
+          <EmptyTitle>No findings</EmptyTitle>
+          <EmptyDescription>
+            This scan did not report any rule hits.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+
+      <FindingsDataTable
+        v-else
+        :data="findings"
+        :project-id="project.id"
+        :scan-id="currentScan.id"
+      />
     </template>
 
     <template v-else>
