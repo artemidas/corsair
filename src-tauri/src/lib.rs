@@ -7,6 +7,7 @@ mod rules;
 use k8s_openapi::api::core::v1::Namespace;
 use kube::api::ListParams;
 use kube::{Api, Client};
+use cluster::{ClusterStatus, KubeContexts};
 use custom_rule::{CustomRule, CustomRuleInput};
 use projects::{Project, ProjectInput};
 use rules::Finding;
@@ -21,17 +22,18 @@ const DB_KEY: &str = "sqlite:corsair.db";
 #[derive(Default)]
 struct AppState {
     client: Mutex<Option<Client>>,
-    /// Last context the client was built for. Lets the UI tell whether the
-    /// active connection still matches the selected project.
-    last_context: Mutex<Option<Option<String>>>,
+    /// Resolved kubeconfig context name the client was built for.
+    last_context: Mutex<Option<String>>,
 }
 
 #[tauri::command]
 async fn connect_cluster(
     state: State<'_, AppState>,
     context: Option<String>,
-) -> Result<(), String> {
-    let client = cluster::connect(context.as_deref())
+) -> Result<ClusterStatus, String> {
+    let requested = context.filter(|s| !s.is_empty());
+    let resolved = cluster::resolve_context_name(requested.as_deref());
+    let client = cluster::connect(requested.as_deref())
         .await
         .map_err(|e| e.to_string())?;
 
@@ -43,13 +45,34 @@ async fn connect_cluster(
         .map_err(|e| e.to_string())?;
 
     *state.client.lock().unwrap() = Some(client);
-    *state.last_context.lock().unwrap() = Some(context);
-    Ok(())
+    *state.last_context.lock().unwrap() = resolved.clone();
+    Ok(ClusterStatus::connected(resolved))
 }
 
 #[tauri::command]
-fn active_context(state: State<'_, AppState>) -> Option<Option<String>> {
-    state.last_context.lock().unwrap().clone()
+fn disconnect_cluster(state: State<'_, AppState>) -> ClusterStatus {
+    *state.client.lock().unwrap() = None;
+    *state.last_context.lock().unwrap() = None;
+    ClusterStatus::disconnected()
+}
+
+#[tauri::command]
+async fn probe_cluster(state: State<'_, AppState>) -> Result<ClusterStatus, String> {
+    let client = state.client.lock().unwrap().clone();
+    let context = state.last_context.lock().unwrap().clone();
+    let Some(client) = client else {
+        return Ok(ClusterStatus::disconnected());
+    };
+
+    Ok(match cluster::probe(&client).await {
+        Ok(()) => ClusterStatus::connected(context),
+        Err(e) => ClusterStatus::unreachable(context, e.to_string()),
+    })
+}
+
+#[tauri::command]
+fn list_kube_contexts() -> Result<KubeContexts, String> {
+    cluster::list_contexts()
 }
 
 #[tauri::command]
@@ -184,7 +207,9 @@ pub fn run() {
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
             connect_cluster,
-            active_context,
+            disconnect_cluster,
+            probe_cluster,
+            list_kube_contexts,
             run_scan,
             list_projects,
             get_project,

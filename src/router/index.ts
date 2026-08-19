@@ -4,6 +4,7 @@ import HomeView from "@/views/HomeView.vue";
 
 import projectsRoutes from "./projects";
 import rulesRoutes from "./rules";
+import settingsRoutes from "./settings";
 
 const routes: RouteRecordRaw[] = [
   { 
@@ -13,6 +14,7 @@ const routes: RouteRecordRaw[] = [
   },
   ...projectsRoutes,
   ...rulesRoutes,
+  ...settingsRoutes,
 ];
 
 export const router = createRouter({

@@ -63,7 +63,7 @@ function subtitleFor(p: Project) {
         </EmptyMedia>
         <EmptyTitle>No projects yet</EmptyTitle>
         <EmptyDescription>
-          Create one to connect a cluster and run a scan.
+          Create one to run a scan against a connected cluster.
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { BookCheck, Box } from "@lucide/vue";
+import { BookCheck, Box, Settings } from "@lucide/vue";
 import {
   Card,
   CardDescription,
@@ -17,7 +17,7 @@ import {
           <Box class="size-8 text-muted-foreground" />
           <CardTitle>Projects</CardTitle>
           <CardDescription>
-            Connect a cluster or point at a container image, then run a scan.
+            Point at a cluster or container image, then run a scan.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -30,6 +30,17 @@ import {
           <CardDescription>
             Your own matchers plus the built-in CIS-aligned checks that ship with
             Corsair.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    </RouterLink>
+    <RouterLink :to="{ name: 'settings' }" class="block md:col-span-2">
+      <Card class="h-full transition-colors hover:bg-accent/50">
+        <CardHeader class="items-center justify-items-center text-center">
+          <Settings class="size-8 text-muted-foreground" />
+          <CardTitle>Settings</CardTitle>
+          <CardDescription>
+            Connect to a Kubernetes cluster through your local kubeconfig.
           </CardDescription>
         </CardHeader>
       </Card>

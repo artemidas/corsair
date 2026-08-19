@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BookCheck, Box, HouseIcon, Moon, Sun } from "@lucide/vue";
+import { BookCheck, Box, HouseIcon, Moon, Settings, Sun } from "@lucide/vue";
 import { RouterLink, useRoute } from "vue-router";
 import {
   Sidebar,
@@ -71,6 +71,16 @@ const route = useRoute();
     </SidebarContent>
 
     <SidebarFooter>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton as-child :is-active="route.name === 'settings'">
+            <RouterLink to="/settings">
+              <Settings />
+              <span class="truncate">Settings</span>
+            </RouterLink>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
       <div class="flex items-center justify-between gap-2 px-2">
         <span class="truncate text-xs text-muted-foreground">
           {{ projects.length }} project{{ projects.length === 1 ? "" : "s" }} ·

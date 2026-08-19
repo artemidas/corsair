@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { RouterLink } from "vue-router";
 import { ArrowLeft, CircleAlert, ScanSearch, Trash2, TriangleAlert } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useCustomRules, isBuiltIn, type CustomRule } from "@/composables/useCustomRules";
-import { useProjects, type Project } from "@/composables/useProjects";
+import { useCluster } from "@/composables/useCluster";
 import { severityBadgeVariant, type Severity } from "@/lib/severity";
 
 interface Finding {
@@ -43,13 +44,8 @@ interface Finding {
   message: string;
 }
 
-interface Connection {
-  context: string | null;
-}
-
 const props = defineProps<{
   rule: CustomRule;
-  selectedProject: Project | null;
 }>();
 
 const emit = defineEmits<{
@@ -58,37 +54,13 @@ const emit = defineEmits<{
 }>();
 
 const { deleteRule } = useCustomRules();
-const { setConnection } = useProjects();
+const { isConnected } = useCluster();
 
 const builtIn = computed(() => isBuiltIn(props.rule));
 
-const connecting = ref(false);
 const scanning = ref(false);
 const scanError = ref("");
 const findings = ref<Finding[]>([]);
-const activeContext = ref<Connection | null>(null);
-
-async function refreshConnection() {
-  try {
-    activeContext.value = await invoke<Connection | null>("active_context");
-  } catch {
-    activeContext.value = null;
-  }
-}
-
-async function onConnect() {
-  const ctx = props.selectedProject?.config.context ?? null;
-  connecting.value = true;
-  try {
-    await invoke("connect_cluster", { context: ctx });
-    setConnection(ctx);
-    activeContext.value = { context: ctx };
-  } catch (err) {
-    scanError.value = String(err);
-  } finally {
-    connecting.value = false;
-  }
-}
 
 async function runScan() {
   scanning.value = true;
@@ -101,19 +73,6 @@ async function runScan() {
     scanning.value = false;
   }
 }
-
-const isConnected = computed(() => activeContext.value !== null);
-
-const contextMatches = computed(() => {
-  if (!activeContext.value) return null;
-  const want =
-    props.rule.resourceType === "Pod" ||
-    props.rule.resourceType === "ServiceAccount" ||
-    props.rule.resourceType === "Role" ||
-    props.rule.resourceType === "RoleBinding";
-  if (!want) return true;
-  return activeContext.value.context === (props.selectedProject?.config.context ?? null);
-});
 
 const matchingFindings = computed(() =>
   findings.value.filter((f) => f.ruleId === props.rule.id),
@@ -133,10 +92,6 @@ async function onDelete() {
     alert(String(err));
   }
 }
-
-onMounted(() => {
-  refreshConnection();
-});
 
 watch(
   () => props.rule.id,
@@ -232,17 +187,7 @@ watch(
         <CardTitle>Findings for this rule</CardTitle>
         <CardAction>
           <Button
-            v-if="!isConnected"
-            type="button"
-            size="sm"
-            :disabled="connecting"
-            @click="onConnect"
-          >
-            <Spinner v-if="connecting" />
-            Connect to cluster
-          </Button>
-          <Button
-            v-else
+            v-if="isConnected"
             type="button"
             size="sm"
             :disabled="scanning"
@@ -251,6 +196,9 @@ watch(
             <Spinner v-if="scanning" />
             Run scan
           </Button>
+          <Button v-else as-child size="sm">
+            <RouterLink :to="{ name: 'settings' }">Connect in Settings</RouterLink>
+          </Button>
         </CardAction>
       </CardHeader>
       <CardContent>
@@ -258,16 +206,11 @@ watch(
           <TriangleAlert />
           <AlertTitle>Not connected</AlertTitle>
           <AlertDescription>
-            Connect to a cluster to scan for findings.
-          </AlertDescription>
-        </Alert>
-
-        <Alert v-else-if="contextMatches === false">
-          <TriangleAlert />
-          <AlertTitle>Context mismatch</AlertTitle>
-          <AlertDescription>
-            This rule applies to namespaced resources, but the active connection
-            uses a different context than the selected project.
+            Connect to a cluster in
+            <RouterLink :to="{ name: 'settings' }" class="underline">
+              Settings
+            </RouterLink>
+            to scan for findings.
           </AlertDescription>
         </Alert>
 

@@ -23,14 +23,9 @@ export interface ProjectInput {
   config: ProjectConfig;
 }
 
-interface Connection {
-  context: string | null;
-}
-
 const projects = ref<Project[]>([]);
 const loading = ref(false);
 const loadError = ref("");
-const connection = ref<Connection | null>(null);
 
 export function useProjects() {
   async function loadProjects() {
@@ -62,30 +57,13 @@ export function useProjects() {
     projects.value = projects.value.filter((p) => p.id !== id);
   }
 
-  async function refreshConnection() {
-    connection.value = await invoke<Connection | null>("active_context");
-  }
-
-  function setConnection(ctx: string | null) {
-    connection.value = { context: ctx };
-  }
-
-  function isConnectedTo(project: Project): boolean {
-    if (project.kind !== "kubernetesClusterReview") return false;
-    return connection.value?.context === (project.config.context ?? null);
-  }
-
   return {
     projects,
     loading,
     loadError,
-    connection,
     loadProjects,
     createProject,
     updateProject,
     deleteProject,
-    refreshConnection,
-    setConnection,
-    isConnectedTo,
   };
 }

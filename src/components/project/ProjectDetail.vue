@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { Box, CircleAlert, CircleCheck, ScanSearch } from "@lucide/vue";
+import { RouterLink } from "vue-router";
+import { Box, CircleAlert, CircleCheck, ScanSearch, TriangleAlert } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
@@ -29,7 +30,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useProjects, type Project } from "@/composables/useProjects";
+import type { Project } from "@/composables/useProjects";
+import { useCluster } from "@/composables/useCluster";
 import { severityBadgeVariant, type Severity } from "@/lib/severity";
 
 interface Finding {
@@ -50,17 +52,19 @@ const emit = defineEmits<{
   edit: [project: Project];
 }>();
 
-const { isConnectedTo, setConnection, refreshConnection } = useProjects();
+const { isConnected, status, contextLabel } = useCluster();
 
-const connecting = ref(false);
-const connectError = ref("");
 const scanning = ref(false);
 const scanError = ref("");
 const findings = ref<Finding[]>([]);
 const hasScanned = ref(false);
 
 const isK8s = computed(() => props.project.kind === "kubernetesClusterReview");
-const connected = computed(() => isConnectedTo(props.project));
+const contextMismatch = computed(() => {
+  const pinned = props.project.config.context;
+  if (!isK8s.value || !isConnected.value || !pinned) return false;
+  return status.value.context !== pinned;
+});
 
 const severityOrder: Record<Severity, number> = {
   critical: 0,
@@ -77,29 +81,12 @@ const sortedFindings = computed(() =>
 watch(
   () => props.project.id,
   () => {
-    connecting.value = false;
-    connectError.value = "";
     scanning.value = false;
     scanError.value = "";
     findings.value = [];
     hasScanned.value = false;
   },
 );
-
-async function connect() {
-  if (!isK8s.value) return;
-  connecting.value = true;
-  connectError.value = "";
-  try {
-    const ctx = props.project.config.context;
-    await invoke("connect_cluster", { context: ctx });
-    setConnection(ctx ?? null);
-  } catch (err) {
-    connectError.value = String(err);
-  } finally {
-    connecting.value = false;
-  }
-}
 
 async function runScan() {
   scanning.value = true;
@@ -112,10 +99,6 @@ async function runScan() {
   } finally {
     scanning.value = false;
   }
-}
-
-async function onRefreshConnection() {
-  await refreshConnection();
 }
 </script>
 
@@ -148,37 +131,32 @@ async function onRefreshConnection() {
     </Card>
 
     <template v-if="isK8s">
-      <Card>
-        <CardHeader>
-          <CardTitle>Cluster</CardTitle>
-          <CardAction>
-            <Button variant="ghost" size="sm" @click="onRefreshConnection">
-              Refresh
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent class="flex flex-col gap-3">
-          <Alert v-if="connected">
-            <CircleCheck />
-            <AlertTitle>Connected</AlertTitle>
-          </Alert>
-          <Alert v-else-if="connectError" variant="destructive">
-            <CircleAlert />
-            <AlertTitle>Failed to connect</AlertTitle>
-            <AlertDescription>{{ connectError }}</AlertDescription>
-          </Alert>
-          <p v-else class="text-sm text-muted-foreground">
-            Not connected to this project's context.
-          </p>
-
-          <div>
-            <Button :disabled="connecting" @click="connect">
-              <Spinner v-if="connecting" />
-              {{ connected ? "Reconnect" : "Connect" }}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <Alert v-if="!isConnected">
+        <TriangleAlert />
+        <AlertTitle>Not connected</AlertTitle>
+        <AlertDescription>
+          Connect to a cluster in
+          <RouterLink :to="{ name: 'settings' }" class="underline">
+            Settings
+          </RouterLink>
+          before running a scan.
+        </AlertDescription>
+      </Alert>
+      <Alert v-else-if="contextMismatch">
+        <TriangleAlert />
+        <AlertTitle>Context mismatch</AlertTitle>
+        <AlertDescription>
+          This project is pinned to
+          <span class="font-mono">{{ project.config.context }}</span>,
+          but the active connection is
+          <span class="font-mono">{{ contextLabel }}</span>.
+          Change it in
+          <RouterLink :to="{ name: 'settings' }" class="underline">
+            Settings
+          </RouterLink>
+          if that isn't what you meant.
+        </AlertDescription>
+      </Alert>
 
       <Alert v-if="scanError" variant="destructive">
         <CircleAlert />
@@ -193,7 +171,7 @@ async function onRefreshConnection() {
             <Button
               variant="secondary"
               size="sm"
-              :disabled="!connected || scanning"
+              :disabled="!isConnected || scanning"
               @click="runScan"
             >
               <Spinner v-if="scanning" />
@@ -216,7 +194,7 @@ async function onRefreshConnection() {
               </EmptyMedia>
               <EmptyTitle>No scan yet</EmptyTitle>
               <EmptyDescription>
-                Connect to the cluster and run a scan to see findings.
+                Connect in Settings, then run a scan to see findings.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

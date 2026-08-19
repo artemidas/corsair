@@ -48,7 +48,6 @@ watch(
     <RuleDetail
       v-if="rule"
       :rule="rule"
-      :selected-project="null"
       @edit="openEdit"
       @back="onBack"
     />
