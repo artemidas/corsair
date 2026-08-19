@@ -24,7 +24,7 @@ const route = useRoute();
 </script>
 
 <template>
-  <Sidebar>
+  <Sidebar class="h-auto">
     <SidebarHeader>
       <div class="px-2 py-1">
         <div class="text-base font-semibold">Corsair</div>

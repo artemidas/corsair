@@ -30,9 +30,9 @@ const title = computed(() => route.meta?.title);
 </script>
 
 <template>
-  <SidebarProvider>
+  <SidebarProvider class="h-full min-h-0 overflow-hidden">
     <AppSidebar />
-    <SidebarInset>
+    <SidebarInset class="min-h-0 overflow-hidden">
       <header class="flex h-12 shrink-0 items-center gap-2 border-b border-border px-4">
         <SidebarTrigger />
         <h1 class="min-w-0 truncate text-lg font-semibold">{{ title }}</h1>
@@ -40,7 +40,7 @@ const title = computed(() => route.meta?.title);
           <ClusterStatusBadge />
         </div>
       </header>
-      <main class="flex-1 overflow-y-auto p-6">
+      <main class="min-h-0 flex-1 overflow-y-auto p-6">
         <div class="flex max-w-5xl flex-col gap-4">
           <RouterView />
         </div>
