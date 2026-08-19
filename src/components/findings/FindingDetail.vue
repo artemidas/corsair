@@ -18,7 +18,7 @@ import { DataTable } from "@/components/ui/data-table";
 import type { Scan } from "@/composables/useScans";
 import { severityBadgeVariant } from "@/lib/severity";
 import { summarizeFindings, type Finding } from "@/lib/findings";
-import { ruleResourceColumns } from "./columns";
+import { createRuleFindingsColumns } from "./columns";
 
 const props = defineProps<{
   projectId: string;
@@ -157,7 +157,7 @@ function getRowId(row: Finding) {
           </ItemTitle>
           <ItemDescription class="line-clamp-none">
             <DataTable
-              :columns="ruleResourceColumns"
+              :columns="createRuleFindingsColumns()"
               :data="items"
               :get-row-id="getRowId"
               :initial-sorting="[{ id: 'severity', desc: false }]"

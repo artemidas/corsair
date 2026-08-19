@@ -1,15 +1,12 @@
 import { h } from "vue";
 import { ArrowUpDown } from "@lucide/vue";
 import { createColumnHelper } from "@tanstack/vue-table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DataTableFeatures } from "@/components/ui/data-table";
 import {
-  severityOrder,
   type Finding,
   type FindingSummary,
 } from "@/lib/findings";
-import { severityBadgeVariant, type Severity } from "@/lib/severity";
 import FindingsDetailsLink from "./FindingsDetailsLink.vue";
 
 const summaryHelper = createColumnHelper<DataTableFeatures, FindingSummary>();
@@ -64,7 +61,7 @@ export function createFindingsSummaryColumns(projectId: string, scanId: string) 
   ]);
 }
 
-export function createRuleFindingsColumns(includeMessage = true) {
+export function createRuleFindingsColumns() {
   return findingHelper.columns([
     findingHelper.accessor((row) => `${row.resourceKind}/${row.resourceName}`, {
       id: "resource",
@@ -83,4 +80,3 @@ export function createRuleFindingsColumns(includeMessage = true) {
 }
 
 export const ruleFindingsColumns = createRuleFindingsColumns();
-export const ruleResourceColumns = createRuleFindingsColumns(false);
