@@ -32,11 +32,33 @@ pub enum Severity {
     Low,
 }
 
+impl Severity {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Critical => "critical",
+            Self::High => "high",
+            Self::Medium => "medium",
+            Self::Low => "low",
+        }
+    }
+
+    pub fn parse(value: &str) -> Result<Self, String> {
+        match value {
+            "critical" => Ok(Self::Critical),
+            "high" => Ok(Self::High),
+            "medium" => Ok(Self::Medium),
+            "low" => Ok(Self::Low),
+            other => Err(format!("unknown severity '{other}' in db")),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Finding {
     pub id: String,
     pub rule_id: String,
+    pub rule_title: String,
     pub severity: Severity,
     pub resource_kind: String,
     pub resource_name: String,
@@ -74,6 +96,7 @@ pub async fn fetch_cluster_data(client: &Client) -> Result<ClusterData, kube::Er
 
 pub trait Rule {
     fn id(&self) -> &'static str;
+    fn title(&self) -> &'static str;
     fn check(&self, data: &ClusterData) -> Vec<Finding>;
 }
 
@@ -84,6 +107,10 @@ pub struct Rbac001;
 impl Rule for Rbac001 {
     fn id(&self) -> &'static str {
         "RBAC001"
+    }
+
+    fn title(&self) -> &'static str {
+        "Default ServiceAccount bound to cluster-admin"
     }
 
     fn check(&self, data: &ClusterData) -> Vec<Finding> {
@@ -102,6 +129,7 @@ impl Rule for Rbac001 {
                     findings.push(Finding {
                         id: format!("RBAC001-{ns}-{crb_name}"),
                         rule_id: self.id().to_string(),
+                        rule_title: self.title().to_string(),
                         severity: Severity::Critical,
                         resource_kind: "ServiceAccount".into(),
                         resource_name: "default".into(),
@@ -125,6 +153,10 @@ impl Rule for Rbac002 {
         "RBAC002"
     }
 
+    fn title(&self) -> &'static str {
+        "Role grants wildcard verb"
+    }
+
     fn check(&self, data: &ClusterData) -> Vec<Finding> {
         let mut findings = Vec::new();
 
@@ -140,6 +172,7 @@ impl Rule for Rbac002 {
                 findings.push(Finding {
                     id: format!("RBAC002-Role-{}-{name}", ns.clone().unwrap_or_default()),
                     rule_id: self.id().to_string(),
+                    rule_title: self.title().to_string(),
                     severity: Severity::High,
                     resource_kind: "Role".into(),
                     resource_name: name.clone(),
@@ -160,6 +193,7 @@ impl Rule for Rbac002 {
                 findings.push(Finding {
                     id: format!("RBAC002-ClusterRole-{name}"),
                     rule_id: self.id().to_string(),
+                    rule_title: self.title().to_string(),
                     severity: Severity::High,
                     resource_kind: "ClusterRole".into(),
                     resource_name: name.clone(),
@@ -179,6 +213,10 @@ pub struct Pod001;
 impl Rule for Pod001 {
     fn id(&self) -> &'static str {
         "POD001"
+    }
+
+    fn title(&self) -> &'static str {
+        "Privileged container"
     }
 
     fn check(&self, data: &ClusterData) -> Vec<Finding> {
@@ -201,6 +239,7 @@ impl Rule for Pod001 {
                             c.name
                         ),
                         rule_id: self.id().to_string(),
+                        rule_title: self.title().to_string(),
                         severity: Severity::Critical,
                         resource_kind: "Pod".into(),
                         resource_name: name.clone(),
@@ -227,6 +266,10 @@ impl Rule for Pod004 {
         "POD004"
     }
 
+    fn title(&self) -> &'static str {
+        "Container not running as non-root"
+    }
+
     fn check(&self, data: &ClusterData) -> Vec<Finding> {
         let mut findings = Vec::new();
         for pod in &data.pods {
@@ -251,6 +294,7 @@ impl Rule for Pod004 {
                             c.name
                         ),
                         rule_id: self.id().to_string(),
+                        rule_title: self.title().to_string(),
                         severity: Severity::Medium,
                         resource_kind: "Pod".into(),
                         resource_name: name.clone(),
@@ -321,6 +365,7 @@ pub async fn evaluate_custom_rule(
             findings.push(Finding {
                 id,
                 rule_id: rule.id.clone(),
+                rule_title: rule.title.clone(),
                 severity: rule.severity,
                 resource_kind: kind.clone(),
                 resource_name: name,

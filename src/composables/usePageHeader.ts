@@ -42,6 +42,20 @@ export function usePageHeader() {
           },
           { label: "Edit" },
         ];
+      case "finding": {
+        const ruleId =
+          typeof route.params.ruleId === "string"
+            ? route.params.ruleId
+            : "Finding";
+        return [
+          { label: "Projects", to: { name: "projects" } },
+          {
+            label: projectName,
+            to: id ? { name: "project", params: { id } } : { name: "projects" },
+          },
+          { label: ruleId },
+        ];
+      }
       case "rules":
         return [{ label: "Rules" }];
       case "rule":

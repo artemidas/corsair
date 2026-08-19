@@ -28,14 +28,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable } from "@/components/ui/data-table";
+import { ruleFindingsColumns } from "@/components/findings";
 import {
   useCustomRules,
   isBuiltIn,
@@ -45,18 +39,9 @@ import {
   type CustomRule,
 } from "@/composables/useCustomRules";
 import { useCluster } from "@/composables/useCluster";
-import { severityBadgeVariant, type Severity } from "@/lib/severity";
+import { severityBadgeVariant } from "@/lib/severity";
+import type { Finding } from "@/lib/findings";
 import { confirm } from "@tauri-apps/plugin-dialog";
-
-interface Finding {
-  id: string;
-  ruleId: string;
-  severity: Severity;
-  resourceKind: string;
-  resourceName: string;
-  namespace: string | null;
-  message: string;
-}
 
 const props = defineProps<{
   rule: CustomRule;
@@ -84,7 +69,7 @@ async function runScan() {
   scanning.value = true;
   scanError.value = "";
   try {
-    findings.value = await invoke<Finding[]>("run_scan");
+    findings.value = await invoke<Finding[]>("preview_scan");
   } catch (err) {
     scanError.value = String(err);
   } finally {
@@ -95,6 +80,10 @@ async function runScan() {
 const matchingFindings = computed(() =>
   findings.value.filter((f) => f.ruleId === props.rule.id),
 );
+
+function getRowId(row: Finding) {
+  return row.id;
+}
 
 async function onDelete() {
   const confirmed = await confirm(`Delete rule "${props.rule.title}"?`, {
@@ -267,28 +256,13 @@ watch(
           </EmptyHeader>
         </Empty>
 
-        <Table v-else>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Severity</TableHead>
-              <TableHead>Resource</TableHead>
-              <TableHead>Namespace</TableHead>
-              <TableHead>Message</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="f in matchingFindings" :key="f.id">
-              <TableCell>
-                <Badge :variant="severityBadgeVariant(f.severity)">
-                  {{ f.severity }}
-                </Badge>
-              </TableCell>
-              <TableCell>{{ f.resourceKind }}/{{ f.resourceName }}</TableCell>
-              <TableCell>{{ f.namespace ?? "-" }}</TableCell>
-              <TableCell class="max-w-xl">{{ f.message }}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+        <DataTable
+          v-else
+          :columns="ruleFindingsColumns"
+          :data="matchingFindings"
+          :get-row-id="getRowId"
+          :initial-sorting="[{ id: 'severity', desc: false }]"
+        />
       </CardContent>
     </Card>
   </div>
