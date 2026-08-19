@@ -2,6 +2,7 @@ mod builtin_rules;
 mod cluster;
 mod custom_rule;
 mod projects;
+mod rule_pack;
 mod rules;
 
 use k8s_openapi::api::core::v1::Namespace;
@@ -10,6 +11,7 @@ use kube::{Api, Client};
 use cluster::{ClusterStatus, KubeContexts};
 use custom_rule::{CustomRule, CustomRuleInput};
 use projects::{Project, ProjectInput};
+use rule_pack::{ExportScope, ImportMode, ImportSummary};
 use rules::Finding;
 use std::sync::Mutex;
 use tauri::State;
@@ -160,6 +162,24 @@ async fn delete_custom_rule(db: State<'_, DbInstances>, id: String) -> Result<()
     custom_rule::delete_rule(&db, &id).await
 }
 
+#[tauri::command]
+async fn export_rules(
+    db: State<'_, DbInstances>,
+    path: String,
+    scope: ExportScope,
+) -> Result<usize, String> {
+    rule_pack::export_to_path(&db, path, scope).await
+}
+
+#[tauri::command]
+async fn import_rules(
+    db: State<'_, DbInstances>,
+    path: String,
+    mode: ImportMode,
+) -> Result<ImportSummary, String> {
+    rule_pack::import_from_path(&db, path, mode).await
+}
+
 fn migrations() -> Vec<Migration> {
     vec![
         Migration {
@@ -191,6 +211,25 @@ fn migrations() -> Vec<Migration> {
             )",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "add operator to custom_rules",
+            sql: "ALTER TABLE custom_rules ADD COLUMN operator TEXT NOT NULL DEFAULT 'equals'",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 4,
+            description: "add import_id to custom_rules",
+            sql: "ALTER TABLE custom_rules ADD COLUMN import_id TEXT",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 5,
+            description: "unique index on custom_rules.import_id",
+            sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_rules_import_id \
+                  ON custom_rules(import_id) WHERE import_id IS NOT NULL",
+            kind: MigrationKind::Up,
+        },
     ]
 }
 
@@ -220,6 +259,8 @@ pub fn run() {
             create_custom_rule,
             update_custom_rule,
             delete_custom_rule,
+            import_rules,
+            export_rules,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

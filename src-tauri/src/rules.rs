@@ -21,7 +21,7 @@ use kube::{Api, Client};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::custom_rule::{evaluate_field_path, value_matches, CustomRule};
+use crate::custom_rule::{evaluate_field_path, evaluate_operator, CustomRule};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -283,8 +283,8 @@ pub fn run_rules(data: &ClusterData) -> Vec<Finding> {
 
 /// Evaluate a single custom rule against the cluster. Fetches the
 /// resources of the rule's `resource_type`, walks the `field_path`, and
-/// emits one finding per resource where any leaf value matches
-/// `expected_value`.
+/// emits one finding per resource where the rule's operator holds over
+/// the resolved leaves.
 pub async fn evaluate_custom_rule(
     client: &Client,
     rule: &CustomRule,
@@ -295,7 +295,7 @@ pub async fn evaluate_custom_rule(
 
     for item in &items {
         let values = evaluate_field_path(item, &rule.field_path);
-        if values.iter().any(|v| value_matches(v, &rule.expected_value)) {
+        if evaluate_operator(&values, rule.operator, &rule.expected_value) {
             let name = item
                 .get("metadata")
                 .and_then(|m| m.get("name"))

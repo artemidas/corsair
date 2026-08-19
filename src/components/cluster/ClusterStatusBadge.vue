@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { RouterLink } from "vue-router";
-import { Hexagon, Unplug } from "@lucide/vue";
+import { Hexagon, Unplug, CircleCheck } from "@lucide/vue";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -44,11 +44,7 @@ const tooltip = computed(() => {
         class="inline-flex max-w-56"
       >
         <Badge variant="outline" class="max-w-full">
-          <span
-            :class="cn('size-2 shrink-0 rounded-full', pipClass)"
-            aria-hidden="true"
-          />
-          <Hexagon v-if="isConnected" />
+          <CircleCheck v-if="isConnected" color="green" />
           <Unplug v-else />
           <span class="truncate font-mono" aria-live="polite">{{ label }}</span>
         </Badge>

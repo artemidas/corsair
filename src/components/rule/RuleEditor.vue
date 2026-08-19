@@ -2,9 +2,12 @@
 import { computed, ref, watch } from "vue";
 import { CircleAlert } from "@lucide/vue";
 import {
+  NEEDS_EXPECTED_VALUE,
+  OPERATORS,
   RESOURCE_TYPES,
   type CustomRule,
   type CustomRuleInput,
+  type Operator,
   type RuleSeverity,
 } from "@/composables/useCustomRules";
 import { Button } from "@/components/ui/button";
@@ -55,14 +58,31 @@ const submitError = ref<string | null>(null);
 
 const form = useForm<CustomRuleInput>({
   validationSchema: toTypedSchema(
-    z.object({
-      title: z.string().trim().min(1, "Title is required."),
-      description: z.string(),
-      severity: z.enum(["critical", "high", "medium", "low"]),
-      resourceType: z.string().min(1, "Resource type is required."),
-      fieldPath: z.string().trim().min(1, "Field path is required."),
-      expectedValue: z.string(),
-    }),
+    z
+      .object({
+        title: z.string().trim().min(1, "Title is required."),
+        description: z.string(),
+        severity: z.enum(["critical", "high", "medium", "low"]),
+        resourceType: z.string().min(1, "Resource type is required."),
+        fieldPath: z.string().trim().min(1, "Field path is required."),
+        operator: z.enum([
+          "equals",
+          "notEquals",
+          "present",
+          "absent",
+          "arrayExcludes",
+        ]),
+        expectedValue: z.string(),
+      })
+      .refine(
+        (v) =>
+          !NEEDS_EXPECTED_VALUE.includes(v.operator) ||
+          v.expectedValue.trim().length > 0,
+        {
+          message: "Expected value is required for this operator.",
+          path: ["expectedValue"],
+        },
+      ),
   ),
   initialValues: {
     title: "",
@@ -70,9 +90,14 @@ const form = useForm<CustomRuleInput>({
     severity: "medium" as RuleSeverity,
     resourceType: "Pod",
     fieldPath: "",
+    operator: "equals" as Operator,
     expectedValue: "",
   },
 });
+
+const showExpectedValue = computed(() =>
+  NEEDS_EXPECTED_VALUE.includes(form.values.operator ?? "equals"),
+);
 
 const onSubmit = form.handleSubmit(async (values) => {
   isSubmitting.value = true;
@@ -100,6 +125,7 @@ function reset() {
         severity: props.rule.severity,
         resourceType: props.rule.resourceType,
         fieldPath: props.rule.fieldPath,
+        operator: props.rule.operator,
         expectedValue: props.rule.expectedValue,
       },
     });
@@ -111,6 +137,7 @@ function reset() {
         severity: "medium",
         resourceType: "Pod",
         fieldPath: "",
+        operator: "equals",
         expectedValue: "",
       },
     });
@@ -218,6 +245,30 @@ function onOpenChange(open: boolean) {
           </FormField>
         </div>
 
+        <FormField v-slot="{ componentField }" name="operator">
+          <FormItem>
+            <FormLabel>Operator</FormLabel>
+            <Select v-bind="componentField">
+              <FormControl>
+                <SelectTrigger class="w-full">
+                  <SelectValue placeholder="Select operator" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem
+                    v-for="op in OPERATORS"
+                    :key="op.value"
+                    :value="op.value"
+                  >
+                    {{ op.label }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </FormItem>
+        </FormField>
+
         <FormField v-slot="{ componentField }" name="fieldPath">
           <FormItem>
             <FormLabel>
@@ -237,7 +288,11 @@ function onOpenChange(open: boolean) {
           </FormItem>
         </FormField>
 
-        <FormField v-slot="{ componentField }" name="expectedValue">
+        <FormField
+          v-if="showExpectedValue"
+          v-slot="{ componentField }"
+          name="expectedValue"
+        >
           <FormItem>
             <FormLabel>Expected value</FormLabel>
             <FormControl>

@@ -2,7 +2,13 @@
 import { computed, ref, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { RouterLink } from "vue-router";
-import { ArrowLeft, CircleAlert, ScanSearch, Trash2, TriangleAlert } from "@lucide/vue";
+import {
+  ArrowLeft,
+  CircleAlert,
+  ScanSearch,
+  Trash2,
+  TriangleAlert,
+} from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
@@ -30,9 +36,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useCustomRules, isBuiltIn, type CustomRule } from "@/composables/useCustomRules";
+import {
+  useCustomRules,
+  isBuiltIn,
+  describeCheck,
+  NEEDS_EXPECTED_VALUE,
+  OPERATOR_LABEL,
+  type CustomRule,
+} from "@/composables/useCustomRules";
 import { useCluster } from "@/composables/useCluster";
 import { severityBadgeVariant, type Severity } from "@/lib/severity";
+import { confirm } from "@tauri-apps/plugin-dialog";
 
 interface Finding {
   id: string;
@@ -57,9 +71,13 @@ const { deleteRule } = useCustomRules();
 const { isConnected } = useCluster();
 
 const builtIn = computed(() => isBuiltIn(props.rule));
+const needsExpected = computed(() =>
+  NEEDS_EXPECTED_VALUE.includes(props.rule.operator),
+);
 
 const scanning = ref(false);
 const scanError = ref("");
+const actionError = ref("");
 const findings = ref<Finding[]>([]);
 
 async function runScan() {
@@ -79,17 +97,17 @@ const matchingFindings = computed(() =>
 );
 
 async function onDelete() {
-  if (
-    !confirm(
-      `Delete the rule "${props.rule.title}"? This will not affect built-in rules.`,
-    )
-  )
-    return;
+  const confirmed = await confirm(`Delete rule "${props.rule.title}"?`, {
+    title: "Delete rule",
+    kind: "warning",
+  });
+  if (!confirmed) return;
+  actionError.value = "";
   try {
     await deleteRule(props.rule.id);
     emit("back");
   } catch (err) {
-    alert(String(err));
+    actionError.value = String(err);
   }
 }
 
@@ -98,6 +116,7 @@ watch(
   () => {
     findings.value = [];
     scanError.value = "";
+    actionError.value = "";
   },
 );
 </script>
@@ -126,7 +145,7 @@ watch(
         <CardDescription v-if="rule.description">
           {{ rule.description }}
         </CardDescription>
-        <CardAction class="flex items-center gap-2">
+        <CardAction class="flex flex-wrap items-center justify-end gap-2">
           <Badge :variant="severityBadgeVariant(rule.severity)">
             {{ rule.severity }}
           </Badge>
@@ -143,16 +162,22 @@ watch(
             v-if="!builtIn"
             type="button"
             variant="ghost"
-            size="icon-sm"
-            class="text-destructive"
-            title="Delete rule"
+            size="sm"
+            class="text-destructive hover:text-destructive"
             @click="onDelete"
           >
             <Trash2 />
+            Delete
           </Button>
         </CardAction>
       </CardHeader>
     </Card>
+
+    <Alert v-if="actionError" variant="destructive">
+      <CircleAlert />
+      <AlertTitle>Could not update rule</AlertTitle>
+      <AlertDescription>{{ actionError }}</AlertDescription>
+    </Alert>
 
     <Card>
       <CardHeader>
@@ -174,9 +199,18 @@ watch(
           </div>
           <div>
             <div class="text-xs uppercase tracking-wide text-muted-foreground">
+              Operator
+            </div>
+            <div class="mt-1 font-mono">{{ OPERATOR_LABEL[rule.operator] }}</div>
+          </div>
+          <div v-if="needsExpected">
+            <div class="text-xs uppercase tracking-wide text-muted-foreground">
               Expected
             </div>
             <div class="mt-1 font-mono">{{ rule.expectedValue }}</div>
+          </div>
+          <div class="md:col-span-3 font-mono text-xs text-muted-foreground">
+            {{ describeCheck(rule) }}
           </div>
         </div>
       </CardContent>
