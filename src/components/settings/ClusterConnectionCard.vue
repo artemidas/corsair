@@ -124,7 +124,7 @@ onMounted(async () => {
       </Alert>
 
       <Alert v-if="isConnected">
-        <CircleCheck />
+        <CircleCheck color="green" />
         <AlertTitle>Connected</AlertTitle>
         <AlertDescription>
           Using context

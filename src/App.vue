@@ -28,7 +28,7 @@ onUnmounted(() => {
     <SidebarInset class="min-h-0 overflow-hidden">
       <AppHeader />
       <main class="min-h-0 flex-1 overflow-y-auto p-6">
-        <div class="flex max-w-5xl flex-col gap-4">
+        <div class="flex flex-col gap-4">
           <RouterView />
         </div>
       </main>
