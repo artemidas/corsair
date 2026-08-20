@@ -1,6 +1,11 @@
 import { computed } from "vue";
 import { useRoute, type RouteLocationRaw } from "vue-router";
-import { useProjects } from "@/composables/useProjects";
+import {
+  listLabelForKind,
+  listRouteForKind,
+  useProjects,
+  type ProjectKind,
+} from "@/composables/useProjects";
 import { useRules } from "@/composables/useRules";
 
 export interface BreadcrumbCrumb {
@@ -8,49 +13,56 @@ export interface BreadcrumbCrumb {
   to?: RouteLocationRaw;
 }
 
+function kindListCrumb(kind: ProjectKind | undefined): BreadcrumbCrumb {
+  const resolved = kind ?? "kubernetesClusterReview";
+  return {
+    label: listLabelForKind(resolved),
+    to: listRouteForKind(resolved),
+  };
+}
+
 export function usePageHeader() {
   const route = useRoute();
   const { getProjectById } = useProjects();
   const { getRuleById } = useRules();
 
+  const projectId = computed(() =>
+    typeof route.params.id === "string" ? route.params.id : undefined,
+  );
+  const project = computed(() =>
+    projectId.value ? getProjectById(projectId.value) : null,
+  );
+  const projectKind = computed<ProjectKind | undefined>(
+    () => route.meta.projectKind ?? project.value?.kind,
+  );
+
   const crumbs = computed<BreadcrumbCrumb[]>(() => {
-    const id = typeof route.params.id === "string" ? route.params.id : undefined;
-    const projectName = id ? (getProjectById(id)?.name ?? "Project") : "Project";
+    const id = projectId.value;
+    const projectName = project.value?.name ?? "Project";
     const ruleTitle = id ? (getRuleById(id)?.title ?? "Rule") : "Rule";
+    const listCrumb = kindListCrumb(projectKind.value);
 
     switch (route.name) {
       case "home":
         return [{ label: "Home" }];
-      case "projects":
-        return [{ label: "Projects" }];
+      case "cluster-projects":
+        return [{ label: "Clusters" }];
+      case "image-projects":
+        return [{ label: "Images" }];
       case "new-project":
-        return [
-          { label: "Projects", to: { name: "projects" } },
-          { label: "New Project" },
-        ];
+        return [{ label: "New Project" }];
       case "new-kubernetes-project":
-        return [
-          { label: "Projects", to: { name: "projects" } },
-          { label: "New Project", to: { name: "new-project" } },
-          { label: "Kubernetes cluster review" },
-        ];
+        return [listCrumb, { label: "New cluster" }];
       case "new-container-image-project":
-        return [
-          { label: "Projects", to: { name: "projects" } },
-          { label: "New Project", to: { name: "new-project" } },
-          { label: "Container image review" },
-        ];
+        return [listCrumb, { label: "New engagement" }];
       case "project":
-        return [
-          { label: "Projects", to: { name: "projects" } },
-          { label: projectName },
-        ];
+        return [listCrumb, { label: projectName }];
       case "edit-project":
         return [
-          { label: "Projects", to: { name: "projects" } },
+          listCrumb,
           {
             label: projectName,
-            to: id ? { name: "project", params: { id } } : { name: "projects" },
+            to: id ? { name: "project", params: { id } } : listCrumb.to,
           },
           { label: "Edit" },
         ];
@@ -60,10 +72,10 @@ export function usePageHeader() {
             ? route.params.ruleId
             : "Finding";
         return [
-          { label: "Projects", to: { name: "projects" } },
+          listCrumb,
           {
             label: projectName,
-            to: id ? { name: "project", params: { id } } : { name: "projects" },
+            to: id ? { name: "project", params: { id } } : listCrumb.to,
           },
           { label: ruleId },
         ];
@@ -85,7 +97,13 @@ export function usePageHeader() {
   const title = computed(
     () => crumbs.value[crumbs.value.length - 1]?.label ?? "Ladon",
   );
-  const nav = computed(() => route.meta.nav);
+  const nav = computed(() => {
+    if (route.meta.nav) return route.meta.nav;
+    const kind = projectKind.value;
+    if (kind === "containerImageReview") return "images";
+    if (kind === "kubernetesClusterReview") return "clusters";
+    return undefined;
+  });
 
   return { title, nav, crumbs };
 }

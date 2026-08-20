@@ -1,11 +1,23 @@
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import type { RouteLocationRaw } from "vue-router";
 
 export type ProjectKind = "kubernetesClusterReview" | "containerImageReview";
 
 export interface ProjectConfig {
   context: string | null;
-  image: string | null;
+  /** @deprecated Folded into `images` on read. */
+  image?: string | null;
+  images?: string[];
+}
+
+export function imagesFor(config: ProjectConfig): string[] {
+  const listed = (config.images ?? [])
+    .map((image) => image.trim())
+    .filter(Boolean);
+  if (listed.length > 0) return [...new Set(listed)];
+  const single = config.image?.trim();
+  return single ? [single] : [];
 }
 
 export interface Project {
@@ -21,6 +33,16 @@ export interface ProjectInput {
   name: string;
   kind: ProjectKind;
   config: ProjectConfig;
+}
+
+export function listRouteForKind(kind: ProjectKind): RouteLocationRaw {
+  return kind === "containerImageReview"
+    ? { name: "image-projects" }
+    : { name: "cluster-projects" };
+}
+
+export function listLabelForKind(kind: ProjectKind): string {
+  return kind === "containerImageReview" ? "Images" : "Clusters";
 }
 
 const projects = ref<Project[]>([]);

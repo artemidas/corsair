@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { BookCheck, Box, Settings } from "@lucide/vue";
+import { BookCheck, Box, Hexagon, Settings } from "@lucide/vue";
 import {
   Card,
   CardDescription,
@@ -11,13 +11,24 @@ import {
 
 <template>
   <div class="grid gap-4 md:grid-cols-2">
-    <RouterLink :to="{ name: 'projects' }" class="block">
+    <RouterLink :to="{ name: 'cluster-projects' }" class="block">
+      <Card class="h-full transition-colors hover:bg-accent/50">
+        <CardHeader class="items-center justify-items-center text-center">
+          <Hexagon class="size-8 text-muted-foreground" />
+          <CardTitle>Clusters</CardTitle>
+          <CardDescription>
+            Point at a Kubernetes cluster, then run a scan.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    </RouterLink>
+    <RouterLink :to="{ name: 'image-projects' }" class="block">
       <Card class="h-full transition-colors hover:bg-accent/50">
         <CardHeader class="items-center justify-items-center text-center">
           <Box class="size-8 text-muted-foreground" />
-          <CardTitle>Projects</CardTitle>
+          <CardTitle>Images</CardTitle>
           <CardDescription>
-            Point at a cluster or container image, then run a scan.
+            Point at a container image, then run a scan.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -33,7 +44,7 @@ import {
         </CardHeader>
       </Card>
     </RouterLink>
-    <RouterLink :to="{ name: 'settings' }" class="block md:col-span-2">
+    <RouterLink :to="{ name: 'settings' }" class="block">
       <Card class="h-full transition-colors hover:bg-accent/50">
         <CardHeader class="items-center justify-items-center text-center">
           <Settings class="size-8 text-muted-foreground" />

@@ -41,7 +41,7 @@ async function onSubmit() {
     const created = await createProject({
       name: values.name.trim(),
       kind: "kubernetesClusterReview",
-      config: { context: values.context?.trim() || null, image: null },
+      config: { context: values.context?.trim() || null, images: [] },
     });
     await router.replace({ name: "project", params: { id: created.id } });
   } catch (err) {
@@ -73,7 +73,7 @@ async function onSubmit() {
         <Button
           type="button"
           variant="ghost"
-          @click="router.push({ name: 'new-project' })"
+          @click="router.push({ name: 'cluster-projects' })"
         >
           <ArrowLeft />
           Back

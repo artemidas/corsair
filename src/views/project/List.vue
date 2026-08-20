@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { RouterLink } from "vue-router";
+import { computed } from "vue";
+import { RouterLink, useRoute } from "vue-router";
 import { Box, CircleAlert, Hexagon, Plus } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,18 +19,47 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useProjects, type Project } from "@/composables/useProjects";
+import { imagesFor, useProjects, type Project } from "@/composables/useProjects";
 
+const route = useRoute();
 const { projects, loading, loadError } = useProjects();
 
-function iconFor(kind: Project["kind"]) {
-  return kind === "kubernetesClusterReview" ? Hexagon : Box;
+const kind = computed(() => route.meta.projectKind ?? "kubernetesClusterReview");
+const listed = computed(() =>
+  projects.value.filter((p) => p.kind === kind.value),
+);
+const isImages = computed(() => kind.value === "containerImageReview");
+
+const copy = computed(() =>
+  isImages.value
+    ? {
+        newLabel: "New engagement",
+        newTo: { name: "new-container-image-project" as const },
+        emptyTitle: "No engagements yet",
+        emptyDescription: "Create one, give it a name, and pick the images to review.",
+        icon: Box,
+      }
+    : {
+        newLabel: "New cluster",
+        newTo: { name: "new-kubernetes-project" as const },
+        emptyTitle: "No clusters yet",
+        emptyDescription: "Create one to scan a connected Kubernetes cluster.",
+        icon: Hexagon,
+      },
+);
+
+function iconFor(projectKind: Project["kind"]) {
+  return projectKind === "kubernetesClusterReview" ? Hexagon : Box;
 }
 
 function subtitleFor(p: Project) {
-  return p.kind === "kubernetesClusterReview"
-    ? (p.config.context ?? "<active context>")
-    : (p.config.image ?? "");
+  if (p.kind === "kubernetesClusterReview") {
+    return p.config.context ?? "<active context>";
+  }
+  const imgs = imagesFor(p.config);
+  if (imgs.length === 0) return "";
+  if (imgs.length === 1) return imgs[0];
+  return `${imgs[0]} +${imgs.length - 1}`;
 }
 </script>
 
@@ -37,9 +67,9 @@ function subtitleFor(p: Project) {
   <div class="flex flex-col gap-4">
     <div class="flex items-center justify-end">
       <Button as-child size="sm">
-        <RouterLink :to="{ name: 'new-project' }">
+        <RouterLink :to="copy.newTo">
           <Plus />
-          New project
+          {{ copy.newLabel }}
         </RouterLink>
       </Button>
     </div>
@@ -55,21 +85,21 @@ function subtitleFor(p: Project) {
       <Skeleton class="h-24 w-full" />
     </div>
 
-    <Empty v-else-if="projects.length === 0">
+    <Empty v-else-if="listed.length === 0">
       <EmptyHeader>
         <EmptyMedia variant="icon">
-          <Box />
+          <component :is="copy.icon" />
         </EmptyMedia>
-        <EmptyTitle>No projects yet</EmptyTitle>
+        <EmptyTitle>{{ copy.emptyTitle }}</EmptyTitle>
         <EmptyDescription>
-          Create one to run a scan against a connected cluster.
+          {{ copy.emptyDescription }}
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Button as-child size="sm">
-          <RouterLink :to="{ name: 'new-project' }">
+          <RouterLink :to="copy.newTo">
             <Plus />
-            New project
+            {{ copy.newLabel }}
           </RouterLink>
         </Button>
       </EmptyContent>
@@ -77,7 +107,7 @@ function subtitleFor(p: Project) {
 
     <div v-else class="grid gap-3 md:grid-cols-2">
       <RouterLink
-        v-for="project in projects"
+        v-for="project in listed"
         :key="project.id"
         :to="{ name: 'project', params: { id: project.id } }"
         class="block"

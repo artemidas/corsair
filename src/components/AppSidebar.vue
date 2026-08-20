@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { BookCheck, Box, HouseIcon, Moon, Settings, Sun } from "@lucide/vue";
+import { computed } from "vue";
+import { BookCheck, Box, Hexagon, HouseIcon, Moon, Settings, Sun } from "@lucide/vue";
 import { RouterLink } from "vue-router";
 import {
   Sidebar,
@@ -22,26 +23,46 @@ const { rules } = useRules();
 const { theme, toggleTheme } = useTheme();
 const { nav } = usePageHeader();
 
-const data = {
-  navMain: [
-    {
-      title: "Home",
-      icon: HouseIcon,
-      to: "/",
-    },
-    {
-      title: "Projects",
-      icon: Box,
-      to: "/projects",
-    },
-    {
-      title: "Rules",
-      icon: BookCheck,
-      to: "/rules",
-    },
-  ],
-}
+const clusterCount = computed(
+  () =>
+    projects.value.filter((p) => p.kind === "kubernetesClusterReview").length,
+);
+const imageCount = computed(
+  () => projects.value.filter((p) => p.kind === "containerImageReview").length,
+);
 
+const topItems = [
+  {
+    title: "Home",
+    icon: HouseIcon,
+    to: { name: "home" },
+    nav: "home",
+  },
+];
+
+const projectItems = [
+  {
+    title: "Kubernetes Clusters",
+    icon: Hexagon,
+    to: { name: "cluster-projects" },
+    nav: "clusters",
+  },
+  {
+    title: "Container Images",
+    icon: Box,
+    to: { name: "image-projects" },
+    nav: "images",
+  },
+];
+
+const bottomItems = [
+  {
+    title: "Rules",
+    icon: BookCheck,
+    to: { name: "rules" },
+    nav: "rules",
+  },
+];
 </script>
 
 <template>
@@ -54,7 +75,9 @@ const data = {
     </SidebarHeader>
 
     <SidebarContent>
-      <NavMain :items="data.navMain" /> 
+      <NavMain :items="topItems" :active-nav="nav" />
+      <NavMain label="Projects" :items="projectItems" :active-nav="nav" />
+      <NavMain :items="bottomItems" :active-nav="nav" />
     </SidebarContent>
     <SidebarFooter>
       <SidebarMenu>
@@ -69,7 +92,8 @@ const data = {
       </SidebarMenu>
       <div class="flex items-center justify-between gap-2 px-2">
         <span class="truncate text-xs text-muted-foreground">
-          {{ projects.length }} project{{ projects.length === 1 ? "" : "s" }} ·
+          {{ clusterCount }} cluster{{ clusterCount === 1 ? "" : "s" }} ·
+          {{ imageCount }} image{{ imageCount === 1 ? "" : "s" }} ·
           {{ rules.length }} rule{{ rules.length === 1 ? "" : "s" }}
         </span>
         <Button

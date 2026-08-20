@@ -7,7 +7,7 @@ import { toTypedSchema } from "@vee-validate/zod";
 import { z } from "zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { FormContainerImage } from "@/components/form";
+import { FormImageEngagement } from "@/components/form";
 import { Spinner } from "@/components/ui/spinner";
 import { useProjects } from "@/composables/useProjects";
 
@@ -20,33 +20,33 @@ const submitError = shallowRef<string | null>(null);
 const form = useForm({
   validationSchema: toTypedSchema(
     z.object({
-      image: z.string().trim().min(1, "Image is required."),
+      name: z.string().trim().min(1, "Name is required."),
+      images: z
+        .array(z.string().trim().min(1))
+        .min(1, "Select at least one image."),
     }),
   ),
   initialValues: {
-    image: "",
+    name: "",
+    images: [] as string[],
   },
 });
 
-function imageToName(image: string): string {
-  const lastSlash = image.lastIndexOf("/");
-  const lastPart = lastSlash >= 0 ? image.slice(lastSlash + 1) : image;
-  const tagIndex = lastPart.search("[:@]");
-  return tagIndex >= 0 ? lastPart.slice(0, tagIndex) : lastPart;
-}
-
 async function onSubmit() {
   const result = await form.validate();
-  const image = result.values?.image?.trim();
-  if (!result.valid || !image) return;
+  const values = result.values;
+  if (!result.valid || !values?.name || !values.images?.length) return;
 
   isSubmitting.value = true;
   submitError.value = null;
   try {
     const created = await createProject({
-      name: imageToName(image),
+      name: values.name.trim(),
       kind: "containerImageReview",
-      config: { context: null, image },
+      config: {
+        context: null,
+        images: values.images.map((image) => image.trim()).filter(Boolean),
+      },
     });
     await router.replace({ name: "project", params: { id: created.id } });
   } catch (err) {
@@ -62,23 +62,23 @@ async function onSubmit() {
   <div class="flex flex-col gap-4">
     <Alert v-if="submitError" variant="destructive">
       <CircleAlert />
-      <AlertTitle>Could not save project</AlertTitle>
+      <AlertTitle>Could not save engagement</AlertTitle>
       <AlertDescription>{{ submitError }}</AlertDescription>
     </Alert>
 
     <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
       <div class="flex items-center gap-2 text-sm text-muted-foreground">
         <Box class="size-4" />
-        <span>Container image review</span>
+        <span>Container image engagement</span>
       </div>
 
-      <FormContainerImage />
+      <FormImageEngagement />
 
       <div class="mt-2 flex items-center justify-between">
         <Button
           type="button"
           variant="ghost"
-          @click="router.push({ name: 'new-project' })"
+          @click="router.push({ name: 'image-projects' })"
         >
           <ArrowLeft />
           Back

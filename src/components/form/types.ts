@@ -4,5 +4,5 @@ export interface ProjectFormValues {
   name: string;
   kind: ProjectKind;
   context: string;
-  image: string;
+  images: string[];
 }

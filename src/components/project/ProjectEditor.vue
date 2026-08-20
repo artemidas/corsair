@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  imagesFor,
   useProjects,
   type Project,
   type ProjectInput,
@@ -34,19 +35,20 @@ const form = useForm<ProjectFormValues>({
         name: z.string().trim().min(1, "Name is required."),
         kind: z.enum(["kubernetesClusterReview", "containerImageReview"]),
         context: z.string(),
-        image: z.string(),
+        images: z.array(z.string()),
       })
       .refine(
         (data) =>
-          data.kind !== "containerImageReview" || data.image.trim().length > 0,
-        { path: ["image"], message: "Image is required." },
+          data.kind !== "containerImageReview" ||
+          data.images.some((image) => image.trim().length > 0),
+        { path: ["images"], message: "Select at least one image." },
       ),
   ),
   initialValues: {
     name: "",
     kind: "kubernetesClusterReview",
     context: "",
-    image: "",
+    images: [] as string[],
   },
 });
 
@@ -59,8 +61,11 @@ async function submitProject(values: ProjectFormValues) {
       kind: values.kind,
       config:
         values.kind === "kubernetesClusterReview"
-          ? { context: values.context.trim() || null, image: null }
-          : { context: null, image: values.image.trim() },
+          ? { context: values.context.trim() || null, images: [] }
+          : {
+              context: null,
+              images: values.images.map((image) => image.trim()).filter(Boolean),
+            },
     };
     await updateProject(props.project.id, input);
     emit("close");
@@ -78,7 +83,7 @@ function reset() {
       name: props.project.name,
       kind: props.project.kind,
       context: props.project.config.context ?? "",
-      image: props.project.config.image ?? "",
+      images: imagesFor(props.project.config),
     },
   });
 }

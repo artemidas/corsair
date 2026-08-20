@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/empty";
 import { FindingsDataTable } from "@/components/findings";
 import ScanHistorySelect from "./ScanHistorySelect.vue";
-import type { Project } from "@/composables/useProjects";
+import { imagesFor, type Project } from "@/composables/useProjects";
 import { useCluster } from "@/composables/useCluster";
 import { useScans } from "@/composables/useScans";
 
@@ -248,7 +248,7 @@ async function runScan() {
           <EmptyDescription>
             Image scanning isn't implemented yet. Once it lands, this is where
             findings for
-            <span class="font-mono">{{ project.config.image }}</span>
+            <span class="font-mono">{{ imagesFor(project.config).join(", ") }}</span>
             will show up.
           </EmptyDescription>
         </EmptyHeader>

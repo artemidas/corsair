@@ -9,7 +9,6 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: {
       title: "Finding",
-      nav: "projects",
     },
   },
 ];

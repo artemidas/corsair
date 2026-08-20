@@ -38,7 +38,7 @@ import {
           <div>
             <CardTitle>Container image review</CardTitle>
             <CardDescription>
-              Inspect a container image for risks.
+              Name an engagement and pick local images to review.
             </CardDescription>
           </div>
         </CardHeader>

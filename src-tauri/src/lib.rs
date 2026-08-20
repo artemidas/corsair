@@ -1,5 +1,6 @@
 mod cluster;
 mod custom_rule;
+mod images;
 mod projects;
 mod rule_pack;
 mod rules;
@@ -10,6 +11,7 @@ use kube::api::ListParams;
 use kube::{Api, Client};
 use cluster::{ClusterStatus, KubeContexts};
 use custom_rule::{Rule, RuleInput};
+use images::LocalImageList;
 use projects::{Project, ProjectInput};
 use rule_pack::{ImportMode, ImportSummary};
 use rules::Finding;
@@ -76,6 +78,11 @@ async fn probe_cluster(state: State<'_, AppState>) -> Result<ClusterStatus, Stri
 #[tauri::command]
 fn list_kube_contexts() -> Result<KubeContexts, String> {
     cluster::list_contexts()
+}
+
+#[tauri::command]
+async fn list_local_images() -> Result<LocalImageList, String> {
+    images::list_local().await
 }
 
 fn connected_client(state: &AppState) -> Result<(Client, Option<String>), String> {
@@ -369,6 +376,7 @@ pub fn run() {
             disconnect_cluster,
             probe_cluster,
             list_kube_contexts,
+            list_local_images,
             preview_scan,
             run_scan,
             list_scans,

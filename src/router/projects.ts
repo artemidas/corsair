@@ -13,11 +13,26 @@ import {
 const routes: RouteRecordRaw[] = [
   {
     path: "/projects",
-    name: "projects",
+    redirect: { name: "cluster-projects" },
+  },
+  {
+    path: "/projects/clusters",
+    name: "cluster-projects",
     component: ProjectList,
     meta: {
-      title: "Projects",
-      nav: "projects",
+      title: "Clusters",
+      nav: "clusters",
+      projectKind: "kubernetesClusterReview",
+    },
+  },
+  {
+    path: "/projects/images",
+    name: "image-projects",
+    component: ProjectList,
+    meta: {
+      title: "Images",
+      nav: "images",
+      projectKind: "containerImageReview",
     },
   },
   {
@@ -25,7 +40,6 @@ const routes: RouteRecordRaw[] = [
     component: ProjectCreate,
     meta: {
       title: "New Project",
-      nav: "projects",
     },
     children: [
       {
@@ -34,7 +48,6 @@ const routes: RouteRecordRaw[] = [
         component: ProjectKindStep,
         meta: {
           title: "New Project",
-          nav: "projects",
         },
       },
       {
@@ -42,8 +55,8 @@ const routes: RouteRecordRaw[] = [
         name: "new-kubernetes-project",
         component: ProjectCreateKubernetes,
         meta: {
-          title: "New Kubernetes Project",
-          nav: "projects",
+          title: "New Cluster",
+          nav: "clusters",
         },
       },
       {
@@ -51,8 +64,8 @@ const routes: RouteRecordRaw[] = [
         name: "new-container-image-project",
         component: ProjectCreateContainerImage,
         meta: {
-          title: "New Container Image Project",
-          nav: "projects",
+          title: "New Engagement",
+          nav: "images",
         },
       },
     ],
@@ -64,7 +77,6 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: {
       title: "Project",
-      nav: "projects",
     },
   },
   {
@@ -74,7 +86,6 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: {
       title: "Edit Project",
-      nav: "projects",
     },
   },
 ];

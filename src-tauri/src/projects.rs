@@ -3,7 +3,8 @@
 //! A "project" is a single security review. Two kinds are supported today:
 //! - `KubernetesClusterReview`: pinned to a kubeconfig context (or the
 //!   currently active one when none is set).
-//! - `ContainerImageReview`: pinned to a container image reference.
+//! - `ContainerImageReview`: a named engagement pinned to one or more
+//!   container image references.
 //!
 //! `kind` is the source of truth. The per-kind fields live on a flat
 //! `ProjectConfig` struct; entries that don't apply to a given kind are
@@ -33,8 +34,11 @@ pub enum ProjectKind {
 pub struct ProjectConfig {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub context: Option<String>,
+    /// Legacy single-image field. Folded into `images` on read/write.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub image: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub images: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -205,21 +209,35 @@ fn normalize_for_kind(kind: ProjectKind, config: ProjectConfig) -> Result<Projec
             Ok(ProjectConfig {
                 context: config.context.map(|c| c.trim().to_string()),
                 image: None,
+                images: Vec::new(),
             })
         }
         ProjectKind::ContainerImageReview => {
-            let image = config
-                .image
-                .as_ref()
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .ok_or_else(|| "image must not be empty".to_string())?;
+            let images = collect_images(&config);
+            if images.is_empty() {
+                return Err("select at least one image".into());
+            }
             Ok(ProjectConfig {
                 context: None,
-                image: Some(image),
+                image: None,
+                images,
             })
         }
     }
+}
+
+fn collect_images(config: &ProjectConfig) -> Vec<String> {
+    let mut images = Vec::new();
+    for image in config.images.iter().chain(config.image.iter()) {
+        let image = image.trim();
+        if image.is_empty() {
+            continue;
+        }
+        if !images.iter().any(|existing| existing == image) {
+            images.push(image.to_string());
+        }
+    }
+    images
 }
 
 fn row_to_project(
@@ -227,8 +245,10 @@ fn row_to_project(
 ) -> Result<Project, String> {
     let (id, name, kind_str, config_str, created_at, updated_at) = row;
     let kind = kind_from_str(&kind_str)?;
-    let config: ProjectConfig =
+    let mut config: ProjectConfig =
         serde_json::from_str(&config_str).map_err(|e| format!("invalid config in db: {e}"))?;
+    config.images = collect_images(&config);
+    config.image = None;
     Ok(Project {
         id,
         name,

@@ -12,7 +12,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { ProjectEditor } from "@/components/project";
-import { useProjects, type Project } from "@/composables/useProjects";
+import { listRouteForKind, useProjects, type Project } from "@/composables/useProjects";
 
 const props = defineProps<{
   id: string;
@@ -48,8 +48,12 @@ function back() {
       </EmptyDescription>
     </EmptyHeader>
     <EmptyContent>
-      <Button variant="ghost" size="sm" @click="router.push({ name: 'projects' })">
-        Back to projects
+      <Button
+        variant="ghost"
+        size="sm"
+        @click="router.push(listRouteForKind('kubernetesClusterReview'))"
+      >
+        Back to clusters
       </Button>
     </EmptyContent>
   </Empty>
