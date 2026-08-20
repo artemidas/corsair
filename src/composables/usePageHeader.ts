@@ -28,6 +28,18 @@ export function usePageHeader() {
           { label: "Projects", to: { name: "projects" } },
           { label: "New Project" },
         ];
+      case "new-kubernetes-project":
+        return [
+          { label: "Projects", to: { name: "projects" } },
+          { label: "New Project", to: { name: "new-project" } },
+          { label: "Kubernetes cluster review" },
+        ];
+      case "new-container-image-project":
+        return [
+          { label: "Projects", to: { name: "projects" } },
+          { label: "New Project", to: { name: "new-project" } },
+          { label: "Container image review" },
+        ];
       case "project":
         return [
           { label: "Projects", to: { name: "projects" } },

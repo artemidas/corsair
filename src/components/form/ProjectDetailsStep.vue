@@ -1,23 +1,18 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useFormContext } from "vee-validate";
-import { ArrowLeft, Box, Hexagon } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
 import FormKubernetesCluster from "./FormKubernetesCluster.vue";
 import FormContainerImage from "./FormContainerImage.vue";
 import type { ProjectFormValues } from "./types";
 
 defineProps<{
-  isEdit: boolean;
   isSubmitting: boolean;
 }>();
 
 const emit = defineEmits<{
   submit: [values: ProjectFormValues];
-  cancel: [];
-  back: [];
 }>();
 
 const { values, setFieldValue, validate } = useFormContext<ProjectFormValues>();
@@ -44,39 +39,13 @@ async function onSubmit() {
 
 <template>
   <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
-    <div
-      v-if="!isEdit"
-      class="flex items-center gap-2 text-sm text-muted-foreground"
-    >
-      <component :is="isK8s ? Hexagon : Box" class="size-4" />
-      <span>
-        {{ isK8s ? "Kubernetes cluster review" : "Container image review" }}
-      </span>
-    </div>
-
     <FormKubernetesCluster v-if="isK8s" />
     <FormContainerImage v-else />
 
-    <div
-      :class="
-        cn(
-          'mt-2 flex items-center',
-          isEdit ? 'justify-end' : 'justify-between',
-        )
-      "
-    >
-      <Button
-        v-if="!isEdit"
-        type="button"
-        variant="ghost"
-        @click="emit('back')"
-      >
-        <ArrowLeft />
-        Back
-      </Button>
+    <div class="mt-2 flex items-center justify-end">
       <Button type="submit" :disabled="isSubmitting">
         <Spinner v-if="isSubmitting" />
-        {{ isEdit ? "Save" : "Create" }}
+        Save
       </Button>
     </div>
   </form>

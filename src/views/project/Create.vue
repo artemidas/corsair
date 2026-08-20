@@ -1,18 +1,15 @@
 <script setup lang="ts">
-import { ProjectEditor } from "@/components/project";
-import { useRouter } from "vue-router";
-
-const router = useRouter();
-
-function onCreated(id: string) {
-  router.replace({ name: "project", params: { id } });
-}
+import { RouterView } from "vue-router";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 </script>
 
 <template>
-  <ProjectEditor
-    :project="null"
-    @created="onCreated"
-    @close="router.push({ name: 'projects' })"
-  />
+  <Card>
+    <CardHeader>
+      <CardTitle>New project</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <RouterView />
+    </CardContent>
+  </Card>
 </template>

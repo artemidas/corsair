@@ -1,7 +1,10 @@
 import type { RouteRecordRaw } from "vue-router";
 
+import { ProjectKindStep } from "@/components/form";
 import {
   ProjectCreate,
+  ProjectCreateKubernetes,
+  ProjectCreateContainerImage,
   ProjectList,
   ProjectDetail,
   ProjectEdit,
@@ -19,12 +22,40 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: "/projects/new",
-    name: "new-project",
     component: ProjectCreate,
     meta: {
       title: "New Project",
       nav: "projects",
     },
+    children: [
+      {
+        path: "",
+        name: "new-project",
+        component: ProjectKindStep,
+        meta: {
+          title: "New Project",
+          nav: "projects",
+        },
+      },
+      {
+        path: "kubernetes",
+        name: "new-kubernetes-project",
+        component: ProjectCreateKubernetes,
+        meta: {
+          title: "New Kubernetes Project",
+          nav: "projects",
+        },
+      },
+      {
+        path: "container-image",
+        name: "new-container-image-project",
+        component: ProjectCreateContainerImage,
+        meta: {
+          title: "New Container Image Project",
+          nav: "projects",
+        },
+      },
+    ],
   },
   {
     path: "/projects/:id",
@@ -46,6 +77,6 @@ const routes: RouteRecordRaw[] = [
       nav: "projects",
     },
   },
-]
+];
 
 export default routes;
