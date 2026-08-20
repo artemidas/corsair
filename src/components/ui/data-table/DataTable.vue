@@ -29,6 +29,7 @@ const props = withDefaults(defineProps<{
   initialSorting?: SortingState
   initialGrouping?: GroupingState
   initialExpanded?: ExpandedState
+  rowClick?: (row: TData) => void
 }>(), {
   initialSorting: () => [],
   initialGrouping: () => [],
@@ -55,8 +56,12 @@ function groupedCell(row: Row<DataTableFeatures, TData>) {
   return row.getVisibleCells().find((cell) => cell.getIsGrouped())
 }
 
-function onRowClick(row: Row<DataTableFeatures, TData>) {
-  if (row.getCanExpand()) row.getToggleExpandedHandler()()
+function handleRowClick(row: Row<DataTableFeatures, TData>) {
+  if (row.getCanExpand()) {
+    row.getToggleExpandedHandler()()
+    return
+  }
+  props.rowClick?.(row.original)
 }
 </script>
 
@@ -85,8 +90,11 @@ function onRowClick(row: Row<DataTableFeatures, TData>) {
             <TableRow
               v-for="row in table.getRowModel().rows"
               :key="row.id"
-              :class="cn(row.getIsGrouped() && 'bg-muted/50 cursor-pointer')"
-              @click="onRowClick(row)"
+              :class="cn(
+                row.getIsGrouped() && 'bg-muted/50',
+                'cursor-pointer',
+              )"
+              @click="handleRowClick(row)"
             >
               <template v-if="row.getIsGrouped() && groupedCell(row)">
                 <TableCell :colspan="columns.length">
