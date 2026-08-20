@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
-import { Box, CircleAlert, CircleCheck, ScanSearch, TriangleAlert } from "@lucide/vue";
+import { CircleAlert, CircleCheck, ScanSearch, TriangleAlert } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/empty";
 import { FindingsDataTable } from "@/components/findings";
 import ScanHistorySelect from "./ScanHistorySelect.vue";
-import { imagesFor, type Project } from "@/composables/useProjects";
+import ImageEngagementSummary from "./ImageEngagementSummary.vue";
+import type { Project } from "@/composables/useProjects";
 import { useCluster } from "@/composables/useCluster";
 import { useScans } from "@/composables/useScans";
 
@@ -23,7 +24,7 @@ const props = defineProps<{
   project: Project;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   edit: [project: Project];
 }>();
 
@@ -239,20 +240,7 @@ async function runScan() {
     </template>
 
     <template v-else>
-      <Empty>
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <Box />
-          </EmptyMedia>
-          <EmptyTitle>Container image scanning</EmptyTitle>
-          <EmptyDescription>
-            Image scanning isn't implemented yet. Once it lands, this is where
-            findings for
-            <span class="font-mono">{{ imagesFor(project.config).join(", ") }}</span>
-            will show up.
-          </EmptyDescription>
-        </EmptyHeader>
-      </Empty>
+      <ImageEngagementSummary :project="project" />
     </template>
   </div>
 </template>

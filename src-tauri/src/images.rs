@@ -20,6 +20,7 @@ pub struct LocalImage {
     pub repository: String,
     pub tag: String,
     pub size: String,
+    pub size_bytes: Option<u64>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -143,12 +144,15 @@ fn into_local(raw: RawImage) -> Option<LocalImage> {
         .or_else(|| named_ref(&raw.repo_tags))
         .or_else(|| compose_ref(&repository, &tag))?;
 
+    let (size, size_bytes) = size_parts(raw.size.as_ref());
+
     Some(LocalImage {
         id: raw.id.unwrap_or_default(),
         reference,
         repository,
         tag,
-        size: format_size(raw.size.as_ref()),
+        size,
+        size_bytes,
     })
 }
 
@@ -178,15 +182,46 @@ fn noneish(s: &str) -> bool {
     s.is_empty() || s == "<none>"
 }
 
-fn format_size(value: Option<&serde_json::Value>) -> String {
+fn size_parts(value: Option<&serde_json::Value>) -> (String, Option<u64>) {
+    let bytes = parse_size_bytes(value);
+    let label = match bytes {
+        Some(n) => format_bytes(n),
+        None => match value {
+            Some(serde_json::Value::String(s)) => s.clone(),
+            _ => String::new(),
+        },
+    };
+    (label, bytes)
+}
+
+fn parse_size_bytes(value: Option<&serde_json::Value>) -> Option<u64> {
     match value {
-        Some(serde_json::Value::String(s)) => s.clone(),
-        Some(serde_json::Value::Number(n)) => n
-            .as_u64()
-            .map(format_bytes)
-            .unwrap_or_else(|| n.to_string()),
-        _ => String::new(),
+        Some(serde_json::Value::Number(n)) => n.as_u64(),
+        Some(serde_json::Value::String(s)) => parse_human_size(s),
+        _ => None,
     }
+}
+
+fn parse_human_size(raw: &str) -> Option<u64> {
+    let compact = raw.trim().replace(' ', "");
+    if compact.is_empty() {
+        return None;
+    }
+    let split = compact
+        .char_indices()
+        .find(|(_, c)| c.is_ascii_alphabetic())
+        .map(|(i, _)| i)?;
+    let (num, unit) = compact.split_at(split);
+    let n: f64 = num.parse().ok()?;
+    let mul = match unit.to_ascii_uppercase().as_str() {
+        "B" => 1.0,
+        "KB" | "KIB" | "K" => 1024.0,
+        "MB" | "MIB" | "M" => 1024.0 * 1024.0,
+        "GB" | "GIB" | "G" => 1024.0 * 1024.0 * 1024.0,
+        "TB" | "TIB" | "T" => 1024.0 * 1024.0 * 1024.0 * 1024.0,
+        _ => return None,
+    };
+    Some((n * mul).round() as u64)
 }
 
 fn format_bytes(n: u64) -> String {

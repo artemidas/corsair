@@ -57,9 +57,8 @@ function subtitleFor(p: Project) {
     return p.config.context ?? "<active context>";
   }
   const imgs = imagesFor(p.config);
-  if (imgs.length === 0) return "";
-  if (imgs.length === 1) return imgs[0];
-  return `${imgs[0]} +${imgs.length - 1}`;
+  if (imgs.length === 1) return '1 image';
+  return `${imgs.length} images`;
 }
 </script>
 
