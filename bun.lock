@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "corsair",
+      "name": "ladon",
       "dependencies": {
         "@lucide/vue": "^1.33.0",
         "@tailwindcss/vite": "^4.3.3",

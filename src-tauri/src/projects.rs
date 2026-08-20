@@ -19,7 +19,7 @@ use sqlx::SqlitePool;
 use tauri_plugin_sql::{DbInstances, DbPool};
 use uuid::Uuid;
 
-const DB_KEY: &str = "sqlite:corsair.db";
+const DB_KEY: &str = "sqlite:ladon.db";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

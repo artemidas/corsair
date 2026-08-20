@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use crate::rules::Severity;
 
-const DB_KEY: &str = "sqlite:corsair.db";
+const DB_KEY: &str = "sqlite:ladon.db";
 
 const SELECT_COLS: &str = "id, rule_id, title, description, severity, resource_type, \
      field_path, operator, expected_value, import_id, created_at, updated_at";

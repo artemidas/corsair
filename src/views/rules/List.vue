@@ -94,7 +94,7 @@ async function onImport() {
 async function onExport() {
   const dest = await save({
     title: "Export rules",
-    defaultPath: "corsair-rules.yaml",
+    defaultPath: "ladon-rules.yaml",
     filters: YAML_FILTERS,
   });
   if (!dest) return;

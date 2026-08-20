@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "corsair",
+  "productName": "Ladon",
   "version": "0.1.0",
-  "identifier": "com.artemidas.corsair",
+  "identifier": "com.artemidas.ladon",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "corsair",
+        "title": "Ladon",
         "width": 1800,
         "height": 1000
       }
@@ -40,7 +40,7 @@
   },
   "plugins": {
     "sql": {
-      "preload": ["sqlite:corsair.db"]
+      "preload": ["sqlite:ladon.db"]
     }
   }
 }

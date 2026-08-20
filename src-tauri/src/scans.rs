@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::rules::{Finding, Severity};
 
-const DB_KEY: &str = "sqlite:corsair.db";
+const DB_KEY: &str = "sqlite:ladon.db";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]

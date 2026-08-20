@@ -78,12 +78,12 @@ export function usePageHeader() {
       case "settings":
         return [{ label: "Settings" }];
       default:
-        return [{ label: route.meta.title ?? "Corsair" }];
+        return [{ label: route.meta.title ?? "Ladon" }];
     }
   });
 
   const title = computed(
-    () => crumbs.value[crumbs.value.length - 1]?.label ?? "Corsair",
+    () => crumbs.value[crumbs.value.length - 1]?.label ?? "Ladon",
   );
   const nav = computed(() => route.meta.nav);
 

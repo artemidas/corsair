@@ -48,7 +48,7 @@ const data = {
   <Sidebar class="h-auto">
     <SidebarHeader>
       <div class="px-2 py-1">
-        <div class="text-base font-semibold">Corsair</div>
+        <div class="text-base font-semibold">Ladon</div>
         <div class="text-xs text-muted-foreground">Kubernetes security scan</div>
       </div>
     </SidebarHeader>

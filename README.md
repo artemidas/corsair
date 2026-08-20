@@ -1,4 +1,4 @@
-# Corsair
+# Ladon
 
 Kubernetes security/pentesting desktop tool. Tauri v2 (Rust) backend, Vue 3 + TypeScript + shadcn-vue / Tailwind v4 / DaisyUI frontend. Everything runs in-process — no Python, no sidecar, no external service.
 

@@ -18,7 +18,7 @@ use std::sync::Mutex;
 use tauri::State;
 use tauri_plugin_sql::{DbInstances, Migration, MigrationKind};
 
-const DB_KEY: &str = "sqlite:corsair.db";
+const DB_KEY: &str = "sqlite:ladon.db";
 
 /// Holds the connected cluster client for the session. In-memory only,
 /// single cluster, no persistence — matches this iteration's scope.

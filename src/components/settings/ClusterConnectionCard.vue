@@ -99,7 +99,7 @@ onMounted(async () => {
     <CardHeader>
       <CardTitle>Cluster connection</CardTitle>
       <CardDescription>
-        Connect through your local kubeconfig. Corsair checks the apiserver
+        Connect through your local kubeconfig. Ladon checks the apiserver
         every 5 seconds and shows the result in the header.
       </CardDescription>
       <CardAction>

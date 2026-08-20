@@ -2,7 +2,7 @@ import { ref } from "vue";
 
 export type Theme = "light" | "dark";
 
-const STORAGE_KEY = "corsair-theme";
+const STORAGE_KEY = "ladon-theme";
 
 function applyToDom(theme: Theme) {
   if (typeof document === "undefined") return;

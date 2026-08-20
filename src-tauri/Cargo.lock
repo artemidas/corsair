@@ -681,26 +681,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "corsair"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "k8s-openapi",
- "kube",
- "serde",
- "serde_json",
- "serde_yaml",
- "sqlx",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-sql",
- "tokio",
- "uuid",
-]
-
-[[package]]
 name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2426,6 +2406,26 @@ dependencies = [
  "serde",
  "serde_json",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "ladon"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "k8s-openapi",
+ "kube",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sqlx",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-sql",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
