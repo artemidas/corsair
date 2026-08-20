@@ -5,11 +5,12 @@ import {
   NEEDS_EXPECTED_VALUE,
   OPERATORS,
   RESOURCE_TYPES,
-  type CustomRule,
-  type CustomRuleInput,
+  useRules,
   type Operator,
+  type Rule,
+  type RuleInput,
   type RuleSeverity,
-} from "@/composables/useCustomRules";
+} from "@/composables/useRules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -39,24 +40,23 @@ import {
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import { z } from "zod";
-import { useCustomRules } from "@/composables/useCustomRules";
 
 const props = defineProps<{
-  rule: CustomRule | null;
+  rule: Rule | null;
 }>();
 
 const emit = defineEmits<{
   close: [];
 }>();
 
-const { createRule, updateRule } = useCustomRules();
+const { createRule, updateRule } = useRules();
 
 const isEdit = computed(() => props.rule !== null);
 const title = computed(() => (isEdit.value ? "Edit rule" : "New rule"));
 const isSubmitting = ref(false);
 const submitError = ref<string | null>(null);
 
-const form = useForm<CustomRuleInput>({
+const form = useForm<RuleInput>({
   validationSchema: toTypedSchema(
     z
       .object({

@@ -1,7 +1,7 @@
 import { computed } from "vue";
 import { useRoute, type RouteLocationRaw } from "vue-router";
 import { useProjects } from "@/composables/useProjects";
-import { useCustomRules } from "@/composables/useCustomRules";
+import { useRules } from "@/composables/useRules";
 
 export interface BreadcrumbCrumb {
   label: string;
@@ -11,7 +11,7 @@ export interface BreadcrumbCrumb {
 export function usePageHeader() {
   const route = useRoute();
   const { getProjectById } = useProjects();
-  const { getRuleById } = useCustomRules();
+  const { getRuleById } = useRules();
 
   const crumbs = computed<BreadcrumbCrumb[]>(() => {
     const id = typeof route.params.id === "string" ? route.params.id : undefined;

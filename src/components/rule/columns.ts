@@ -4,14 +4,14 @@ import { createColumnHelper } from "@tanstack/vue-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DataTableFeatures } from "@/components/ui/data-table";
-import { type CustomRule } from "@/composables/useCustomRules";
+import { type Rule } from "@/composables/useRules";
 import { severityBadgeVariant } from "@/lib/severity";
 import RuleRowActions from "@/components/rule/RuleRowActions.vue";
 import RuleTitleCell from "@/components/rule/RuleTitleCell.vue";
 
-const helper = createColumnHelper<DataTableFeatures, CustomRule>();
+const helper = createColumnHelper<DataTableFeatures, Rule>();
 
-const SEVERITY_RANK: Record<CustomRule["severity"], number> = {
+const SEVERITY_RANK: Record<Rule["severity"], number> = {
   critical: 0,
   high: 1,
   medium: 2,
@@ -38,9 +38,14 @@ function sortableHeader(title: string) {
 }
 
 export function createRulesColumns(opts: {
-  onDelete: (rule: CustomRule) => void;
+  onDelete: (rule: Rule) => void;
 }) {
   return helper.columns([
+    helper.accessor("ruleId", {
+      header: sortableHeader("Rule ID"),
+      cell: ({ row }) =>
+        h("span", { class: "px-3 py-2 font-mono text-sm" }, row.original.ruleId),
+    }),
     helper.accessor("title", {
       header: sortableHeader("Rule"),
       cell: ({ row }) => h(RuleTitleCell, { rule: row.original }),

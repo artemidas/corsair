@@ -11,7 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { useCustomRules, type CustomRule } from "@/composables/useCustomRules";
+import { useRules, type Rule } from "@/composables/useRules";
 import { RuleDetail, RuleEditor } from "@/components/rule";
 
 const props = defineProps<{
@@ -19,9 +19,9 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
-const { getRuleById, loading } = useCustomRules();
+const { getRuleById, loading } = useRules();
 
-const rule = computed<CustomRule | null>(() => getRuleById(props.id));
+const rule = computed<Rule | null>(() => getRuleById(props.id));
 
 const editorOpen = ref(false);
 
@@ -33,7 +33,7 @@ function onBack() {
   router.push({ name: "rules" });
 }
 
-const editorTarget = ref<CustomRule | null>(null);
+const editorTarget = ref<Rule | null>(null);
 watch(
   () => rule.value?.id,
   () => {

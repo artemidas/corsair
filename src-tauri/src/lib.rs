@@ -1,4 +1,3 @@
-mod builtin_rules;
 mod cluster;
 mod custom_rule;
 mod projects;
@@ -10,9 +9,9 @@ use k8s_openapi::api::core::v1::Namespace;
 use kube::api::ListParams;
 use kube::{Api, Client};
 use cluster::{ClusterStatus, KubeContexts};
-use custom_rule::{CustomRule, CustomRuleInput};
+use custom_rule::{Rule, RuleInput};
 use projects::{Project, ProjectInput};
-use rule_pack::{ExportScope, ImportMode, ImportSummary};
+use rule_pack::{ImportMode, ImportSummary};
 use rules::Finding;
 use scans::{Scan, ScanResult, StoredFinding};
 use std::sync::Mutex;
@@ -100,8 +99,8 @@ async fn evaluate_cluster(
 
     let mut findings = rules::run_rules(&data);
 
-    let custom_rules = custom_rule::all_rules(db).await?;
-    findings.extend(rules::evaluate_custom_rules(client, &custom_rules).await);
+    let stored = custom_rule::list_rules(db).await?;
+    findings.extend(rules::evaluate_rules(client, &stored).await);
 
     Ok(findings)
 }
@@ -183,31 +182,29 @@ async fn delete_project(db: State<'_, DbInstances>, id: String) -> Result<(), St
 }
 
 #[tauri::command]
-async fn list_custom_rules(db: State<'_, DbInstances>) -> Result<Vec<CustomRule>, String> {
-    let mut out = custom_rule::builtin();
-    out.extend(custom_rule::list_rules(&db).await?);
-    Ok(out)
+async fn list_rules(db: State<'_, DbInstances>) -> Result<Vec<Rule>, String> {
+    custom_rule::list_rules(&db).await
 }
 
 #[tauri::command]
-async fn create_custom_rule(
+async fn create_rule(
     db: State<'_, DbInstances>,
-    input: CustomRuleInput,
-) -> Result<CustomRule, String> {
+    input: RuleInput,
+) -> Result<Rule, String> {
     custom_rule::create_rule(&db, input).await
 }
 
 #[tauri::command]
-async fn update_custom_rule(
+async fn update_rule(
     db: State<'_, DbInstances>,
     id: String,
-    input: CustomRuleInput,
-) -> Result<CustomRule, String> {
+    input: RuleInput,
+) -> Result<Rule, String> {
     custom_rule::update_rule(&db, id, input).await
 }
 
 #[tauri::command]
-async fn delete_custom_rule(db: State<'_, DbInstances>, id: String) -> Result<(), String> {
+async fn delete_rule(db: State<'_, DbInstances>, id: String) -> Result<(), String> {
     custom_rule::delete_rule(&db, &id).await
 }
 
@@ -215,9 +212,8 @@ async fn delete_custom_rule(db: State<'_, DbInstances>, id: String) -> Result<()
 async fn export_rules(
     db: State<'_, DbInstances>,
     path: String,
-    scope: ExportScope,
 ) -> Result<usize, String> {
-    rule_pack::export_to_path(&db, path, scope).await
+    rule_pack::export_to_path(&db, path).await
 }
 
 #[tauri::command]
@@ -324,6 +320,36 @@ fn migrations() -> Vec<Migration> {
                   ON findings(scan_id, rule_id)",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 10,
+            description: "seed former built-in rules as regular rows",
+            sql: "INSERT OR IGNORE INTO custom_rules \
+                  (id, title, description, severity, resource_type, field_path, operator, expected_value, import_id, created_at, updated_at) \
+                  VALUES \
+                  ('BUILTIN-001', 'Privileged container', 'Containers running with securityContext.privileged=true can access all host devices and capabilities.', 'critical', 'Pod', 'spec.containers[*].securityContext.privileged', 'equals', 'true', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00'), \
+                  ('BUILTIN-002', 'Host network', 'Pods with spec.hostNetwork=true share the host''s network namespace and can listen on any interface.', 'high', 'Pod', 'spec.hostNetwork', 'equals', 'true', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00'), \
+                  ('BUILTIN-003', 'Host PID namespace', 'Pods with spec.hostPID=true can see and signal all host processes.', 'high', 'Pod', 'spec.hostPID', 'equals', 'true', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00'), \
+                  ('BUILTIN-004', 'Host IPC namespace', 'Pods with spec.hostIPC=true share the host''s IPC namespace.', 'medium', 'Pod', 'spec.hostIPC', 'equals', 'true', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00'), \
+                  ('BUILTIN-005', 'Default ServiceAccount in use', 'Pods or workload bindings that rely on the ''default'' ServiceAccount inherit its permissive token by default.', 'medium', 'ServiceAccount', 'metadata.name', 'equals', 'default', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00'), \
+                  ('BUILTIN-006', 'Role grants wildcard verb', 'A Role granting the ''*'' verb allows every action on the listed resources.', 'high', 'Role', 'rules[*].verbs[*]', 'equals', '*', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00'), \
+                  ('BUILTIN-007', 'ClusterRole grants wildcard verb', 'A ClusterRole granting the ''*'' verb allows every action cluster-wide.', 'high', 'ClusterRole', 'rules[*].verbs[*]', 'equals', '*', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00'), \
+                  ('BUILTIN-008', 'Role grants wildcard API group', 'A Role granting the ''*'' apiGroup effectively grants every API.', 'high', 'Role', 'rules[*].apiGroups[*]', 'equals', '*', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00'), \
+                  ('BUILTIN-009', 'ClusterRole grants wildcard API group', 'A ClusterRole granting the ''*'' apiGroup effectively grants every API cluster-wide.', 'high', 'ClusterRole', 'rules[*].apiGroups[*]', 'equals', '*', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00')",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 11,
+            description: "add public rule_id to custom_rules",
+            sql: "ALTER TABLE custom_rules ADD COLUMN rule_id TEXT",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 12,
+            description: "unique index on custom_rules.rule_id",
+            sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_rules_rule_id \
+                  ON custom_rules(rule_id) WHERE rule_id IS NOT NULL AND rule_id != ''",
+            kind: MigrationKind::Up,
+        },
     ]
 }
 
@@ -353,10 +379,10 @@ pub fn run() {
             create_project,
             update_project,
             delete_project,
-            list_custom_rules,
-            create_custom_rule,
-            update_custom_rule,
-            delete_custom_rule,
+            list_rules,
+            create_rule,
+            update_rule,
+            delete_rule,
             import_rules,
             export_rules,
         ])

@@ -2,14 +2,13 @@
 //!
 //! Two kinds of rules are evaluated together during a scan:
 //! - **Hardcoded** rules (RBAC001/002, POD001/004) — fixed set in this file.
-//! - **Custom rules** — user-authored (DB) and built-in (curated library).
-//!   Each is a simple matcher: given a resource type, a field path, and
-//!   an expected value, flag any resource that has a value equal to the
-//!   expected one at that path. See `custom_rule::evaluate_field_path` and
-//!   `value_matches` for the path syntax.
+//! - **Stored rules** — matchers persisted in SQLite. Each is a simple
+//!   matcher: given a resource type, a field path, and an expected value,
+//!   flag any resource that has a value equal to the expected one at that
+//!   path. See `custom_rule::evaluate_field_path` and `value_matches`.
 //!
 //! Hardcoded rules read from a pre-fetched `ClusterData` snapshot so they
-//! all see the same view. Custom rules use the cluster client directly to
+//! all see the same view. Stored rules use the cluster client directly to
 //! fetch only the resource type they need.
 
 use k8s_openapi::api::core::v1::{Pod, ServiceAccount};
@@ -21,7 +20,7 @@ use kube::{Api, Client};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::custom_rule::{evaluate_field_path, evaluate_operator, CustomRule};
+use crate::custom_rule::{evaluate_field_path, evaluate_operator, Rule as StoredRule};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -325,13 +324,13 @@ pub fn run_rules(data: &ClusterData) -> Vec<Finding> {
     all_rules().iter().flat_map(|rule| rule.check(data)).collect()
 }
 
-/// Evaluate a single custom rule against the cluster. Fetches the
+/// Evaluate a single stored rule against the cluster. Fetches the
 /// resources of the rule's `resource_type`, walks the `field_path`, and
 /// emits one finding per resource where the rule's operator holds over
 /// the resolved leaves.
-pub async fn evaluate_custom_rule(
+pub async fn evaluate_rule(
     client: &Client,
-    rule: &CustomRule,
+    rule: &StoredRule,
 ) -> Result<Vec<Finding>, kube::Error> {
     let mut findings = Vec::new();
     let items = fetch_resources_as_json(client, &rule.resource_type).await?;
@@ -364,7 +363,7 @@ pub async fn evaluate_custom_rule(
             };
             findings.push(Finding {
                 id,
-                rule_id: rule.id.clone(),
+                rule_id: rule.rule_id.clone(),
                 rule_title: rule.title.clone(),
                 severity: rule.severity,
                 resource_kind: kind.clone(),
@@ -378,17 +377,14 @@ pub async fn evaluate_custom_rule(
     Ok(findings)
 }
 
-/// Run every custom rule, collecting findings. Errors evaluating an
+/// Run every stored rule, collecting findings. Errors evaluating an
 /// individual rule are logged and skipped (the scan keeps going).
-pub async fn evaluate_custom_rules(
-    client: &Client,
-    rules: &[CustomRule],
-) -> Vec<Finding> {
+pub async fn evaluate_rules(client: &Client, rules: &[StoredRule]) -> Vec<Finding> {
     let mut out = Vec::new();
     for rule in rules {
-        match evaluate_custom_rule(client, rule).await {
+        match evaluate_rule(client, rule).await {
             Ok(f) => out.extend(f),
-            Err(e) => eprintln!("error evaluating custom rule {}: {e}", rule.id),
+            Err(e) => eprintln!("error evaluating rule {}: {e}", rule.id),
         }
     }
     out

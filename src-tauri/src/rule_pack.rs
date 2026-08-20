@@ -1,14 +1,14 @@
 //! Versioned YAML rule-pack format (v1) for import/export.
 //!
-//! See the rule-import-export spec. `notes` and `duplicatesBuiltin` are
-//! parsed for human-authored files and discarded — they are never stored.
+//! `notes` and `duplicatesBuiltin` are parsed for human-authored files
+//! and discarded — they are never stored.
 
 use serde::{de, Deserialize, Deserializer, Serialize};
 use tauri_plugin_sql::DbInstances;
 
 use crate::custom_rule::{
     create_imported_rule, delete_imported_rules, get_rule_by_import_id, list_rules, update_rule,
-    CustomRule, CustomRuleInput, Operator,
+    Operator, Rule, RuleInput,
 };
 use crate::rules::Severity;
 
@@ -57,13 +57,6 @@ pub struct RulePackEntry {
 
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-pub enum ExportScope {
-    User,
-    All,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
 pub enum ImportMode {
     Merge,
     Replace,
@@ -98,7 +91,7 @@ pub fn parse_rule_pack(text: &str) -> Result<RulePack, String> {
     Ok(pack)
 }
 
-pub fn serialize_rule_pack(rules: &[CustomRule]) -> Result<String, String> {
+pub fn serialize_rule_pack(rules: &[Rule]) -> Result<String, String> {
     let pack = RulePack {
         version: PACK_VERSION,
         rules: rules.iter().map(to_pack_entry).collect(),
@@ -106,7 +99,7 @@ pub fn serialize_rule_pack(rules: &[CustomRule]) -> Result<String, String> {
     serde_yaml::to_string(&pack).map_err(|e| e.to_string())
 }
 
-fn to_pack_entry(rule: &CustomRule) -> RulePackEntry {
+fn to_pack_entry(rule: &Rule) -> RulePackEntry {
     RulePackEntry {
         id: Some(
             rule.import_id
@@ -130,7 +123,7 @@ pub(crate) enum PreparedEntry {
     Skip(SkippedRule),
     Ready {
         import_id: Option<String>,
-        input: CustomRuleInput,
+        input: RuleInput,
     },
 }
 
@@ -148,7 +141,7 @@ pub(crate) fn prepare_entry(entry: RulePackEntry) -> PreparedEntry {
         return PreparedEntry::Skip(SkippedRule {
             id,
             title,
-            reason: "native matcher requires a built-in implementation".into(),
+            reason: "native matcher is not supported".into(),
         });
     }
 
@@ -185,7 +178,7 @@ pub(crate) fn prepare_entry(entry: RulePackEntry) -> PreparedEntry {
     let import_id = if id.is_empty() { None } else { Some(id) };
     PreparedEntry::Ready {
         import_id,
-        input: CustomRuleInput {
+        input: RuleInput {
             title: entry.title,
             description: entry.description,
             severity: entry.severity,
@@ -206,24 +199,15 @@ fn ensure_yaml_extension(path: String) -> String {
     }
 }
 
-pub async fn export_to_path(
-    db: &DbInstances,
-    path: String,
-    scope: ExportScope,
-) -> Result<usize, String> {
-    let mut selected = list_rules(db).await?;
-    if scope == ExportScope::All {
-        let mut all = crate::custom_rule::builtin();
-        all.extend(selected);
-        selected = all;
-    }
+pub async fn export_to_path(db: &DbInstances, path: String) -> Result<usize, String> {
+    let selected = list_rules(db).await?;
     if selected.is_empty() {
         return Err("no rules to export".into());
     }
     write_pack(&path, &selected)
 }
 
-fn write_pack(path: &str, rules: &[CustomRule]) -> Result<usize, String> {
+fn write_pack(path: &str, rules: &[Rule]) -> Result<usize, String> {
     let path = ensure_yaml_extension(path.to_string());
     let yaml = serialize_rule_pack(rules)?;
     std::fs::write(&path, yaml).map_err(|e| format!("failed to write '{path}': {e}"))?;
@@ -425,8 +409,9 @@ rules:
 
     #[test]
     fn export_round_trip_preserves_import_id() {
-        let rule = CustomRule {
+        let rule = Rule {
             id: "uuid-1".into(),
+            rule_id: "POD10".into(),
             title: "CPU limit not set".into(),
             description: String::new(),
             severity: Severity::Medium,
@@ -450,6 +435,7 @@ rules:
         sqlx::query(
             "CREATE TABLE custom_rules (
                 id TEXT PRIMARY KEY,
+                rule_id TEXT,
                 title TEXT NOT NULL,
                 description TEXT NOT NULL,
                 severity TEXT NOT NULL,
@@ -468,6 +454,13 @@ rules:
         sqlx::query(
             "CREATE UNIQUE INDEX idx_custom_rules_import_id \
              ON custom_rules(import_id) WHERE import_id IS NOT NULL",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "CREATE UNIQUE INDEX idx_custom_rules_rule_id \
+             ON custom_rules(rule_id) WHERE rule_id IS NOT NULL AND rule_id != ''",
         )
         .execute(&pool)
         .await
@@ -503,7 +496,7 @@ rules:
         let pool = setup_pool().await;
         insert_rule(
             &pool,
-            CustomRuleInput {
+            RuleInput {
                 title: "hand".into(),
                 description: String::new(),
                 severity: Severity::Low,

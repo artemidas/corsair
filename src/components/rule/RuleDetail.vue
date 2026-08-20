@@ -31,31 +31,29 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { ruleFindingsColumns } from "@/components/findings";
 import {
-  useCustomRules,
-  isBuiltIn,
+  useRules,
   describeCheck,
   NEEDS_EXPECTED_VALUE,
   OPERATOR_LABEL,
-  type CustomRule,
-} from "@/composables/useCustomRules";
+  type Rule,
+} from "@/composables/useRules";
 import { useCluster } from "@/composables/useCluster";
 import { severityBadgeVariant } from "@/lib/severity";
 import type { Finding } from "@/lib/findings";
 import { confirm } from "@tauri-apps/plugin-dialog";
 
 const props = defineProps<{
-  rule: CustomRule;
+  rule: Rule;
 }>();
 
 const emit = defineEmits<{
   back: [];
-  edit: [rule: CustomRule];
+  edit: [rule: Rule];
 }>();
 
-const { deleteRule } = useCustomRules();
+const { deleteRule } = useRules();
 const { isConnected } = useCluster();
 
-const builtIn = computed(() => isBuiltIn(props.rule));
 const needsExpected = computed(() =>
   NEEDS_EXPECTED_VALUE.includes(props.rule.operator),
 );
@@ -78,7 +76,7 @@ async function runScan() {
 }
 
 const matchingFindings = computed(() =>
-  findings.value.filter((f) => f.ruleId === props.rule.id),
+  findings.value.filter((f) => f.ruleId === props.rule.ruleId),
 );
 
 function getRowId(row: Finding) {
@@ -126,9 +124,7 @@ watch(
     <Card>
       <CardHeader>
         <div class="flex items-center gap-2">
-          <Badge v-if="builtIn" variant="outline">Built-in</Badge>
-          <Badge v-else variant="secondary">User</Badge>
-          <CardDescription class="font-mono">{{ rule.id }}</CardDescription>
+          <CardDescription class="font-mono">{{ rule.ruleId }}</CardDescription>
         </div>
         <CardTitle>{{ rule.title }}</CardTitle>
         <CardDescription v-if="rule.description">
@@ -139,7 +135,6 @@ watch(
             {{ rule.severity }}
           </Badge>
           <Button
-            v-if="!builtIn"
             type="button"
             variant="ghost"
             size="sm"
@@ -148,7 +143,6 @@ watch(
             Edit
           </Button>
           <Button
-            v-if="!builtIn"
             type="button"
             variant="ghost"
             size="sm"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import {
   BookCheck,
@@ -27,36 +27,24 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { RuleEditor, RulesDataTable } from "@/components/rule";
 import {
-  useCustomRules,
+  useRules,
   YAML_FILTERS,
-  type CustomRule,
   type ImportSummary,
-} from "@/composables/useCustomRules";
+  type Rule,
+} from "@/composables/useRules";
 import { confirm, open, save } from "@tauri-apps/plugin-dialog";
 
 const router = useRouter();
-const {
-  userRules,
-  builtInRules,
-  loading,
-  loadError,
-  deleteRule,
-  importRules,
-  exportRules,
-} = useCustomRules();
-
-const items = computed<CustomRule[]>(() => [
-  ...userRules.value,
-  ...builtInRules.value,
-]);
+const { rules, loading, loadError, deleteRule, importRules, exportRules } =
+  useRules();
 
 const editorOpen = ref(false);
-const editorTarget = ref<CustomRule | null>(null);
+const editorTarget = ref<Rule | null>(null);
 const actionBusy = ref(false);
 const actionError = ref("");
 const actionMessage = ref("");
 
-function openRule(rule: CustomRule) {
+function openRule(rule: Rule) {
   router.push({ name: "rule", params: { id: rule.id } });
 }
 
@@ -70,7 +58,7 @@ function clearActionStatus() {
   actionMessage.value = "";
 }
 
-async function onDelete(rule: CustomRule) {
+async function onDelete(rule: Rule) {
   const confirmed = await confirm(`Delete rule "${rule.title}"?`, {
     title: "Delete rule",
     kind: "warning",
@@ -113,7 +101,7 @@ async function onExport() {
   clearActionStatus();
   actionBusy.value = true;
   try {
-    const count = await exportRules(dest, "user");
+    const count = await exportRules(dest);
     actionMessage.value =
       count === 1 ? "Exported 1 rule." : `Exported ${count} rules.`;
   } catch (err) {
@@ -141,8 +129,8 @@ function formatImportSummary(summary: ImportSummary): string {
       <ItemContent>
         <ItemTitle>Rules</ItemTitle>
         <ItemDescription>
-          Your own matchers plus the built-in checks that ship with Corsair.
-          Built-in rules are read-only. Import and export user rules as YAML.
+          Matchers that flag Kubernetes resources during a scan. Import and
+          export as YAML.
         </ItemDescription>
       </ItemContent>
       <ItemActions>
@@ -158,7 +146,7 @@ function formatImportSummary(summary: ImportSummary): string {
         <Button
           variant="outline"
           size="sm"
-          :disabled="actionBusy || userRules.length === 0"
+          :disabled="actionBusy || rules.length === 0"
           @click="onExport"
         >
           <Download />
@@ -187,13 +175,13 @@ function formatImportSummary(summary: ImportSummary): string {
         <AlertTitle>{{ actionMessage }}</AlertTitle>
       </Alert>
       <div
-        v-if="loading && items.length === 0"
+        v-if="loading && rules.length === 0"
         class="flex flex-col gap-2"
       >
         <Skeleton class="h-16 w-full" />
         <Skeleton class="h-16 w-full" />
       </div>
-      <Empty v-else-if="items.length === 0" class="border-0 p-6 md:p-8">
+      <Empty v-else-if="rules.length === 0" class="border-0 p-6 md:p-8">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <BookCheck />
@@ -206,7 +194,7 @@ function formatImportSummary(summary: ImportSummary): string {
       </Empty>
       <RulesDataTable
         v-else
-        :data="items"
+        :data="rules"
         @row-click="openRule"
         @delete="onDelete"
       />

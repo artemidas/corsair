@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import { Trash2 } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
-import { isBuiltIn, type CustomRule } from "@/composables/useCustomRules";
+import type { Rule } from "@/composables/useRules";
 
 const props = defineProps<{
-  rule: CustomRule;
+  rule: Rule;
 }>();
 
 const emit = defineEmits<{
-  delete: [rule: CustomRule];
+  delete: [rule: Rule];
 }>();
 </script>
 
 <template>
   <Button
-    v-if="!isBuiltIn(rule)"
     variant="ghost"
     size="icon-sm"
     class="text-destructive hover:text-destructive"

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { DataTable } from "@/components/ui/data-table";
-import type { CustomRule } from "@/composables/useCustomRules";
+import type { Rule } from "@/composables/useRules";
 import { createRulesColumns } from "./columns";
 
 defineProps<{
-  data: CustomRule[];
+  data: Rule[];
 }>();
 
 const emit = defineEmits<{
-  rowClick: [rule: CustomRule];
-  delete: [rule: CustomRule];
+  rowClick: [rule: Rule];
+  delete: [rule: Rule];
 }>();
 
 const columns = computed(() =>
@@ -19,15 +19,15 @@ const columns = computed(() =>
   }),
 );
 
-function getRowId(row: CustomRule) {
+function getRowId(row: Rule) {
   return row.id;
 }
 
-function onRowClick(rule: CustomRule) {
+function onRowClick(rule: Rule) {
   emit("rowClick", rule);
 }
 
-function onDelete(rule: CustomRule) {
+function onDelete(rule: Rule) {
   emit("delete", rule);
 }
 </script>
