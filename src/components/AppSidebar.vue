@@ -5,22 +5,43 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import NavMain from "@/components/NavMain.vue";
 import { useProjects } from "@/composables/useProjects";
-import { useCustomRules } from "@/composables/useCustomRules";
+import { useRules } from "@/composables/useRules";
 import { useTheme } from "@/composables/useTheme";
 import { usePageHeader } from "@/composables/usePageHeader";
 
 const { projects } = useProjects();
-const { userRules } = useCustomRules();
+const { rules } = useRules();
 const { theme, toggleTheme } = useTheme();
 const { nav } = usePageHeader();
+
+const data = {
+  navMain: [
+    {
+      title: "Home",
+      icon: HouseIcon,
+      to: "/",
+    },
+    {
+      title: "Projects",
+      icon: Box,
+      to: "/projects",
+    },
+    {
+      title: "Rules",
+      icon: BookCheck,
+      to: "/rules",
+    },
+  ],
+}
+
 </script>
 
 <template>
@@ -33,43 +54,8 @@ const { nav } = usePageHeader();
     </SidebarHeader>
 
     <SidebarContent>
-      <SidebarGroup>
-
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton as-child :is-active="nav === 'home'">
-              <RouterLink to="/">
-                <HouseIcon />
-                <span class="truncate">Home</span>
-              </RouterLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton as-child :is-active="nav === 'projects'">
-              <RouterLink to="/projects">
-                <Box />
-                <span class="truncate">Projects</span>
-              </RouterLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton as-child :is-active="nav === 'rules'">
-              <RouterLink to="/rules">
-                <BookCheck />
-                <span class="truncate">Rules</span>
-              </RouterLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarGroup>
+      <NavMain :items="data.navMain" /> 
     </SidebarContent>
-
     <SidebarFooter>
       <SidebarMenu>
         <SidebarMenuItem>
@@ -84,7 +70,7 @@ const { nav } = usePageHeader();
       <div class="flex items-center justify-between gap-2 px-2">
         <span class="truncate text-xs text-muted-foreground">
           {{ projects.length }} project{{ projects.length === 1 ? "" : "s" }} ·
-          {{ userRules.length }} rule{{ userRules.length === 1 ? "" : "s" }}
+          {{ rules.length }} rule{{ rules.length === 1 ? "" : "s" }}
         </span>
         <Button
           variant="ghost"

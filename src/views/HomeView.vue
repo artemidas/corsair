@@ -28,8 +28,7 @@ import {
           <BookCheck class="size-8 text-muted-foreground" />
           <CardTitle>Rules</CardTitle>
           <CardDescription>
-            Your own matchers plus the built-in CIS-aligned checks that ship with
-            Corsair.
+            Matchers that flag Kubernetes resources during a scan.
           </CardDescription>
         </CardHeader>
       </Card>

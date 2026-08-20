@@ -160,7 +160,6 @@ function getRowId(row: Finding) {
               :columns="createRuleFindingsColumns()"
               :data="items"
               :get-row-id="getRowId"
-              :initial-sorting="[{ id: 'severity', desc: false }]"
             />
           </ItemDescription>
         </ItemContent>
