@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 
+	"ladon/appdb"
 	"ladon/project"
+	"ladon/rule"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -14,21 +16,22 @@ import (
 var assets embed.FS
 
 func main() {
-	dbPath, err := project.DefaultDBPath()
+	dbPath, err := appdb.DefaultPath()
 	if err != nil {
 		log.Fatal(err)
 	}
-	projects, err := project.Open(dbPath)
+	db, err := appdb.Open(dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer project.Close(projects)
+	defer appdb.Close(db)
 
 	app := application.New(application.Options{
 		Name:        "Ladon",
 		Description: "Kubernetes security review",
 		Services: []application.Service{
-			application.NewService(projects),
+			application.NewService(project.New(db)),
+			application.NewService(rule.New(db)),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

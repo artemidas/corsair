@@ -1,5 +1,17 @@
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  CreateRule as createRuleBound,
+  DeleteRule as deleteRuleBound,
+  ListRules,
+  UpdateRule as updateRuleBound,
+} from "@/bindings/ladon/rule/service";
+import type {
+  Operator as BoundOperator,
+  Rule as BoundRule,
+  RuleInput as BoundRuleInput,
+  Severity as BoundSeverity,
+} from "@/bindings/ladon/rule/models";
 
 export type RuleSeverity = "critical" | "high" | "medium" | "low";
 export type Operator =
@@ -85,6 +97,35 @@ export function describeCheck(r: Rule): string {
 
 export const YAML_FILTERS = [{ name: "YAML", extensions: ["yaml", "yml"] }];
 
+function toBoundInput(input: RuleInput): BoundRuleInput {
+  return {
+    title: input.title,
+    description: input.description,
+    severity: input.severity as BoundSeverity,
+    resourceType: input.resourceType,
+    fieldPath: input.fieldPath,
+    operator: input.operator as BoundOperator,
+    expectedValue: input.expectedValue,
+  };
+}
+
+function fromBound(rule: BoundRule): Rule {
+  return {
+    id: rule.id,
+    ruleId: rule.ruleId,
+    title: rule.title,
+    description: rule.description,
+    severity: rule.severity as RuleSeverity,
+    resourceType: rule.resourceType,
+    fieldPath: rule.fieldPath,
+    operator: rule.operator as Operator,
+    expectedValue: rule.expectedValue,
+    importId: rule.importId,
+    createdAt: rule.createdAt,
+    updatedAt: rule.updatedAt,
+  };
+}
+
 const rules = ref<Rule[]>([]);
 const loading = ref(false);
 const loadError = ref("");
@@ -94,7 +135,7 @@ export function useRules() {
     loading.value = true;
     loadError.value = "";
     try {
-      rules.value = await invoke<Rule[]>("list_rules");
+      rules.value = ((await ListRules()) ?? []).map(fromBound);
     } catch (err) {
       loadError.value = String(err);
     } finally {
@@ -103,19 +144,19 @@ export function useRules() {
   }
 
   async function createRule(input: RuleInput): Promise<Rule> {
-    const created = await invoke<Rule>("create_rule", { input });
+    const created = fromBound(await createRuleBound(toBoundInput(input)));
     rules.value = [...rules.value, created];
     return created;
   }
 
   async function updateRule(id: string, input: RuleInput): Promise<Rule> {
-    const updated = await invoke<Rule>("update_rule", { id, input });
+    const updated = fromBound(await updateRuleBound(id, toBoundInput(input)));
     rules.value = rules.value.map((r) => (r.id === id ? updated : r));
     return updated;
   }
 
   async function deleteRule(id: string) {
-    await invoke("delete_rule", { id });
+    await deleteRuleBound(id);
     rules.value = rules.value.filter((r) => r.id !== id);
   }
 
