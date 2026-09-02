@@ -1,6 +1,16 @@
 import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import type { RouteLocationRaw } from "vue-router";
+import {
+  CreateProject as createProjectBound,
+  DeleteProject as deleteProjectBound,
+  ListProjects,
+  UpdateProject as updateProjectBound,
+} from "@/bindings/ladon/project/service";
+import type {
+  Project as BoundProject,
+  ProjectInput as BoundProjectInput,
+  ProjectKind as BoundProjectKind,
+} from "@/bindings/ladon/project/models";
 
 export type ProjectKind = "kubernetesClusterReview" | "containerImageReview";
 
@@ -45,6 +55,33 @@ export function listLabelForKind(kind: ProjectKind): string {
   return kind === "containerImageReview" ? "Images" : "Clusters";
 }
 
+function toBoundInput(input: ProjectInput): BoundProjectInput {
+  return {
+    name: input.name,
+    kind: input.kind as BoundProjectKind,
+    config: {
+      context: input.config.context,
+      image: input.config.image,
+      images: input.config.images ?? [],
+    },
+  };
+}
+
+function fromBound(project: BoundProject): Project {
+  return {
+    id: project.id,
+    name: project.name,
+    kind: project.kind as ProjectKind,
+    config: {
+      context: project.config.context,
+      image: project.config.image,
+      images: project.config.images ?? [],
+    },
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+  };
+}
+
 const projects = ref<Project[]>([]);
 const loading = ref(false);
 const loadError = ref("");
@@ -54,7 +91,7 @@ export function useProjects() {
     loading.value = true;
     loadError.value = "";
     try {
-      projects.value = await invoke<Project[]>("list_projects");
+      projects.value = ((await ListProjects()) ?? []).map(fromBound);
     } catch (err) {
       loadError.value = String(err);
     } finally {
@@ -63,19 +100,19 @@ export function useProjects() {
   }
 
   async function createProject(input: ProjectInput): Promise<Project> {
-    const created = await invoke<Project>("create_project", { input });
+    const created = fromBound(await createProjectBound(toBoundInput(input)));
     projects.value = [...projects.value, created];
     return created;
   }
 
   async function updateProject(id: string, input: ProjectInput): Promise<Project> {
-    const updated = await invoke<Project>("update_project", { id, input });
+    const updated = fromBound(await updateProjectBound(id, toBoundInput(input)));
     projects.value = projects.value.map((p) => (p.id === id ? updated : p));
     return updated;
   }
 
   async function deleteProject(id: string) {
-    await invoke("delete_project", { id });
+    await deleteProjectBound(id);
     projects.value = projects.value.filter((p) => p.id !== id);
   }
 
