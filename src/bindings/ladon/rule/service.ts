@@ -17,8 +17,16 @@ export function DeleteRule(id: string): $CancellablePromise<void> {
     return $Call.ByID(1485501250, id);
 }
 
+export function ExportRules(path: string): $CancellablePromise<number> {
+    return $Call.ByID(1712418024, path);
+}
+
 export function GetRule(id: string): $CancellablePromise<$models.Rule | null> {
     return $Call.ByID(2250464767, id);
+}
+
+export function ImportRules(path: string, mode: $models.ImportMode): $CancellablePromise<$models.ImportSummary> {
+    return $Call.ByID(1055735217, path, mode);
 }
 
 export function ListRules(): $CancellablePromise<$models.Rule[] | null> {

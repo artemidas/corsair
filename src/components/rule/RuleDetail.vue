@@ -40,7 +40,7 @@ import { useCluster } from "@/composables/useCluster";
 import { useScans } from "@/composables/useScans";
 import { severityBadgeVariant } from "@/lib/severity";
 import type { Finding } from "@/lib/findings";
-import { confirm } from "@tauri-apps/plugin-dialog";
+import { confirmDelete } from "@/lib/dialogs";
 
 const props = defineProps<{
   rule: Rule;
@@ -85,10 +85,10 @@ function getRowId(row: Finding) {
 }
 
 async function onDelete() {
-  const confirmed = await confirm(`Delete rule "${props.rule.title}"?`, {
-    title: "Delete rule",
-    kind: "warning",
-  });
+  const confirmed = await confirmDelete(
+    `Delete rule "${props.rule.title}"?`,
+    "Delete rule",
+  );
   if (!confirmed) return;
   actionError.value = "";
   try {

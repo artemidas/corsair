@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,12 +51,17 @@ func (s *Service) GetRule(id string) (*Rule, error) {
 }
 
 func (s *Service) CreateRule(input RuleInput) (Rule, error) {
+	return s.insertRule(input, nil)
+}
+
+func (s *Service) insertRule(input RuleInput, importID *string) (Rule, error) {
 	ctx := context.Background()
 	prepared, err := prepareInput(input)
 	if err != nil {
 		return Rule{}, err
 	}
-	ruleID, err := s.allocateRuleID(ctx, prepared.resourceType, nil)
+	importID = normalizeImportID(importID)
+	ruleID, err := s.allocateRuleID(ctx, prepared.resourceType, importID)
 	if err != nil {
 		return Rule{}, err
 	}
@@ -70,20 +76,60 @@ func (s *Service) CreateRule(input RuleInput) (Rule, error) {
 		FieldPath:     prepared.fieldPath,
 		Operator:      prepared.operator,
 		ExpectedValue: prepared.expectedValue,
+		ImportID:      importID,
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
 	_, err = s.db.ExecContext(ctx,
 		`INSERT INTO rules
 		 (id, rule_id, title, description, severity, resource_type, field_path, operator, expected_value, import_id, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.ID, r.RuleID, r.Title, r.Description, string(r.Severity), r.ResourceType,
-		r.FieldPath, string(r.Operator), r.ExpectedValue, r.CreatedAt, r.UpdatedAt,
+		r.FieldPath, string(r.Operator), r.ExpectedValue, nullString(importID),
+		r.CreatedAt, r.UpdatedAt,
 	)
 	if err != nil {
 		return Rule{}, err
 	}
 	return r, nil
+}
+
+func (s *Service) getByImportID(importID string) (*Rule, error) {
+	ctx := context.Background()
+	row := s.db.QueryRowContext(ctx,
+		`SELECT `+selectCols+` FROM rules WHERE import_id = ?`, importID)
+	r, err := scanRule(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
+func (s *Service) deleteImported() error {
+	_, err := s.db.ExecContext(context.Background(),
+		`DELETE FROM rules WHERE import_id IS NOT NULL`)
+	return err
+}
+
+func normalizeImportID(importID *string) *string {
+	if importID == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*importID)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}
+
+func nullString(s *string) any {
+	if s == nil {
+		return nil
+	}
+	return *s
 }
 
 func (s *Service) UpdateRule(id string, input RuleInput) (Rule, error) {

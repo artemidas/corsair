@@ -28,11 +28,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RuleEditor, RulesDataTable } from "@/components/rule";
 import {
   useRules,
-  YAML_FILTERS,
   type ImportSummary,
   type Rule,
 } from "@/composables/useRules";
-import { confirm, open, save } from "@tauri-apps/plugin-dialog";
+import { confirmDelete, openYamlFile, saveYamlFile } from "@/lib/dialogs";
 
 const router = useRouter();
 const { rules, loading, loadError, deleteRule, importRules, exportRules } =
@@ -59,10 +58,10 @@ function clearActionStatus() {
 }
 
 async function onDelete(rule: Rule) {
-  const confirmed = await confirm(`Delete rule "${rule.title}"?`, {
-    title: "Delete rule",
-    kind: "warning",
-  });
+  const confirmed = await confirmDelete(
+    `Delete rule "${rule.title}"?`,
+    "Delete rule",
+  );
   if (!confirmed) return;
   clearActionStatus();
   try {
@@ -73,12 +72,8 @@ async function onDelete(rule: Rule) {
 }
 
 async function onImport() {
-  const selected = await open({
-    multiple: false,
-    title: "Import rules",
-    filters: YAML_FILTERS,
-  });
-  if (!selected || Array.isArray(selected)) return;
+  const selected = await openYamlFile("Import rules");
+  if (!selected) return;
   clearActionStatus();
   actionBusy.value = true;
   try {
@@ -92,11 +87,7 @@ async function onImport() {
 }
 
 async function onExport() {
-  const dest = await save({
-    title: "Export rules",
-    defaultPath: "ladon-rules.yaml",
-    filters: YAML_FILTERS,
-  });
+  const dest = await saveYamlFile("Export rules", "ladon-rules.yaml");
   if (!dest) return;
   clearActionStatus();
   actionBusy.value = true;

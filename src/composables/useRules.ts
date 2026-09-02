@@ -1,12 +1,15 @@
 import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import {
   CreateRule as createRuleBound,
   DeleteRule as deleteRuleBound,
+  ExportRules as exportRulesBound,
+  ImportRules as importRulesBound,
   ListRules,
   UpdateRule as updateRuleBound,
 } from "@/bindings/ladon/rule/service";
 import type {
+  ImportMode as BoundImportMode,
+  ImportSummary as BoundImportSummary,
   Operator as BoundOperator,
   Rule as BoundRule,
   RuleInput as BoundRuleInput,
@@ -95,8 +98,6 @@ export function describeCheck(r: Rule): string {
   return `${r.resourceType} · ${r.fieldPath} ${OPERATOR_LABEL[r.operator]}${needsValue ? " " + r.expectedValue : ""}`;
 }
 
-export const YAML_FILTERS = [{ name: "YAML", extensions: ["yaml", "yml"] }];
-
 function toBoundInput(input: RuleInput): BoundRuleInput {
   return {
     title: input.title,
@@ -123,6 +124,18 @@ function fromBound(rule: BoundRule): Rule {
     importId: rule.importId,
     createdAt: rule.createdAt,
     updatedAt: rule.updatedAt,
+  };
+}
+
+function fromBoundSummary(summary: BoundImportSummary): ImportSummary {
+  return {
+    created: summary.created,
+    updated: summary.updated,
+    skipped: (summary.skipped ?? []).map((s) => ({
+      id: s.id,
+      title: s.title,
+      reason: s.reason,
+    })),
   };
 }
 
@@ -161,16 +174,16 @@ export function useRules() {
   }
 
   async function exportRules(path: string): Promise<number> {
-    return invoke<number>("export_rules", { path });
+    return exportRulesBound(path);
   }
 
   async function importRules(
     path: string,
     mode: ImportMode = "merge",
   ): Promise<ImportSummary> {
-    const summary = await invoke<ImportSummary>("import_rules", { path, mode });
+    const summary = await importRulesBound(path, mode as BoundImportMode);
     await loadRules();
-    return summary;
+    return fromBoundSummary(summary);
   }
 
   function getRuleById(id: string): Rule | null {

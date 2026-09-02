@@ -7,11 +7,14 @@ export {
 };
 
 export {
+    ImportMode,
     Operator,
     Severity
 } from "./models.js";
 
 export type {
+    ImportSummary,
     Rule,
-    RuleInput
+    RuleInput,
+    SkippedRule
 } from "./models.js";
