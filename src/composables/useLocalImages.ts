@@ -1,5 +1,6 @@
 import { shallowRef } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { ListLocalImages } from "@/bindings/ladon/images/service";
+import type { LocalImage as BoundImage } from "@/bindings/ladon/images/models";
 
 export interface LocalImage {
   id: string;
@@ -15,6 +16,17 @@ export interface LocalImageList {
   images: LocalImage[];
 }
 
+function fromBound(image: BoundImage): LocalImage {
+  return {
+    id: image.id,
+    reference: image.reference,
+    repository: image.repository,
+    tag: image.tag,
+    size: image.size,
+    sizeBytes: image.sizeBytes,
+  };
+}
+
 export function useLocalImages() {
   const images = shallowRef<LocalImage[]>([]);
   const runtime = shallowRef<string | null>(null);
@@ -25,8 +37,8 @@ export function useLocalImages() {
     loading.value = true;
     loadError.value = "";
     try {
-      const result = await invoke<LocalImageList>("list_local_images");
-      images.value = result.images;
+      const result = await ListLocalImages();
+      images.value = (result.images ?? []).map(fromBound);
       runtime.value = result.runtime;
     } catch (err) {
       images.value = [];
