@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { BookCheck, Box, Hexagon, HouseIcon, Moon, Settings, Sun } from "@lucide/vue";
+import { BookCheck, Box, HouseIcon, Moon, Settings, Sun, ShipWheel } from "@lucide/vue";
 import { RouterLink } from "vue-router";
 import {
   Sidebar,
@@ -43,7 +43,7 @@ const topItems = [
 const projectItems = [
   {
     title: "Kubernetes Clusters",
-    icon: Hexagon,
+    icon: ShipWheel,
     to: { name: "cluster-projects" },
     nav: "clusters",
   },
