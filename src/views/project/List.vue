@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { RouterLink, useRoute } from "vue-router";
-import { Box, CircleAlert, Hexagon, Plus } from "@lucide/vue";
+import { Box, CircleAlert, Plus, ShipWheel } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -44,12 +44,12 @@ const copy = computed(() =>
         newTo: { name: "new-kubernetes-project" as const },
         emptyTitle: "No clusters yet",
         emptyDescription: "Create one to scan a connected Kubernetes cluster.",
-        icon: Hexagon,
+        icon: ShipWheel,
       },
 );
 
 function iconFor(projectKind: Project["kind"]) {
-  return projectKind === "kubernetesClusterReview" ? Hexagon : Box;
+  return projectKind === "kubernetesClusterReview" ? ShipWheel : Box;
 }
 
 function subtitleFor(p: Project) {
