@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { RouterLink } from "vue-router";
 import {
   ArrowLeft,
@@ -38,6 +37,7 @@ import {
   type Rule,
 } from "@/composables/useRules";
 import { useCluster } from "@/composables/useCluster";
+import { useScans } from "@/composables/useScans";
 import { severityBadgeVariant } from "@/lib/severity";
 import type { Finding } from "@/lib/findings";
 import { confirm } from "@tauri-apps/plugin-dialog";
@@ -53,6 +53,7 @@ const emit = defineEmits<{
 
 const { deleteRule } = useRules();
 const { isConnected } = useCluster();
+const { previewScan } = useScans();
 
 const needsExpected = computed(() =>
   NEEDS_EXPECTED_VALUE.includes(props.rule.operator),
@@ -67,7 +68,7 @@ async function runScan() {
   scanning.value = true;
   scanError.value = "";
   try {
-    findings.value = await invoke<Finding[]>("preview_scan");
+    findings.value = await previewScan();
   } catch (err) {
     scanError.value = String(err);
   } finally {
