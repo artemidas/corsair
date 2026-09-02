@@ -3,6 +3,8 @@ package project
 import (
 	"path/filepath"
 	"testing"
+
+	"ladon/appdb"
 )
 
 func ptr(s string) *string { return &s }
@@ -87,11 +89,12 @@ func TestParseKind(t *testing.T) {
 
 func TestProjectCRUD(t *testing.T) {
 	dir := t.TempDir()
-	svc, err := Open(filepath.Join(dir, "ladon.db"))
+	db, err := appdb.Open(filepath.Join(dir, "ladon.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = Close(svc) })
+	t.Cleanup(func() { _ = appdb.Close(db) })
+	svc := New(db)
 
 	created, err := svc.CreateProject(ProjectInput{
 		Name:   "  demo  ",
