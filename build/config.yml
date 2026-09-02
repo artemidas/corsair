@@ -18,7 +18,6 @@ dev_mode:
       - .git
       - node_modules
       - src
-      - src-tauri
       - bin
       - dist
       - graphify-out
