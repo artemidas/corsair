@@ -7,7 +7,7 @@ tasks:
   generate:bindings:
     summary: Generate TypeScript bindings for Go services
     cmds:
-      - wails3 generate bindings -ts -i -d ./src/bindings . ./project ./rule ./cluster
+      - wails3 generate bindings -ts -i -d ./src/bindings . ./project ./rule ./cluster ./scan
 
   test:
     cmds:

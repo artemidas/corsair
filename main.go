@@ -9,6 +9,7 @@ import (
 	"ladon/cluster"
 	"ladon/project"
 	"ladon/rule"
+	"ladon/scan"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -27,13 +28,16 @@ func main() {
 	}
 	defer appdb.Close(db)
 
+	session := cluster.NewSession()
+	ruleSvc := rule.New(db)
 	app := application.New(application.Options{
 		Name:        "Ladon",
 		Description: "Kubernetes security review",
 		Services: []application.Service{
 			application.NewService(project.New(db)),
-			application.NewService(rule.New(db)),
-			application.NewService(cluster.New(cluster.NewSession())),
+			application.NewService(ruleSvc),
+			application.NewService(cluster.New(session)),
+			application.NewService(scan.New(db, session, ruleSvc)),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

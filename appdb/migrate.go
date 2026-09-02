@@ -42,6 +42,29 @@ const seedRules = `INSERT OR IGNORE INTO rules
 	('BUILTIN-008', 'Role grants wildcard API group', 'A Role granting the ''*'' apiGroup effectively grants every API.', 'high', 'Role', 'rules[*].apiGroups[*]', 'equals', '*', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00'),
 	('BUILTIN-009', 'ClusterRole grants wildcard API group', 'A ClusterRole granting the ''*'' apiGroup effectively grants every API cluster-wide.', 'high', 'ClusterRole', 'rules[*].apiGroups[*]', 'equals', '*', NULL, '2024-01-01T00:00:00+00:00', '2024-01-01T00:00:00+00:00')`
 
+const schemaScans = `CREATE TABLE IF NOT EXISTS scans (
+	id TEXT PRIMARY KEY,
+	project_id TEXT NOT NULL,
+	status TEXT NOT NULL,
+	context TEXT,
+	error TEXT,
+	finding_count INTEGER NOT NULL DEFAULT 0,
+	started_at TEXT NOT NULL,
+	finished_at TEXT NOT NULL
+)`
+
+const schemaFindings = `CREATE TABLE IF NOT EXISTS findings (
+	id TEXT PRIMARY KEY,
+	scan_id TEXT NOT NULL,
+	rule_id TEXT NOT NULL,
+	rule_title TEXT NOT NULL,
+	severity TEXT NOT NULL,
+	resource_kind TEXT NOT NULL,
+	resource_name TEXT NOT NULL,
+	namespace TEXT,
+	message TEXT NOT NULL
+)`
+
 func migrate(db *sql.DB) error {
 	var version int
 	if err := db.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
@@ -72,6 +95,26 @@ func migrate(db *sql.DB) error {
 			return fmt.Errorf("seed rules: %w", err)
 		}
 		if _, err := db.Exec("PRAGMA user_version = 2"); err != nil {
+			return fmt.Errorf("set schema version: %w", err)
+		}
+		version = 2
+	}
+	if version < 3 {
+		if _, err := db.Exec(schemaScans); err != nil {
+			return fmt.Errorf("create scans table: %w", err)
+		}
+		if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_scans_project_started
+			ON scans(project_id, started_at)`); err != nil {
+			return fmt.Errorf("index scans: %w", err)
+		}
+		if _, err := db.Exec(schemaFindings); err != nil {
+			return fmt.Errorf("create findings table: %w", err)
+		}
+		if _, err := db.Exec(`CREATE INDEX IF NOT EXISTS idx_findings_scan_rule
+			ON findings(scan_id, rule_id)`); err != nil {
+			return fmt.Errorf("index findings: %w", err)
+		}
+		if _, err := db.Exec("PRAGMA user_version = 3"); err != nil {
 			return fmt.Errorf("set schema version: %w", err)
 		}
 	}

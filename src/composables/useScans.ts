@@ -1,6 +1,18 @@
 import { computed, ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import {
+  GetScan,
+  ListScanFindings,
+  ListScans,
+  PreviewScan,
+  RunScan as runScanBound,
+} from "@/bindings/ladon/scan/service";
+import type {
+  Finding as BoundFinding,
+  Scan as BoundScan,
+  ScanResult as BoundResult,
+} from "@/bindings/ladon/scan/models";
 import type { Finding } from "@/lib/findings";
+import type { Severity } from "@/lib/severity";
 
 export type ScanStatus = "completed" | "failed";
 
@@ -23,6 +35,33 @@ export type ScanResult = {
 const scansByProject = ref<Record<string, Scan[]>>({});
 const findingsByScan = ref<Record<string, Finding[]>>({});
 const selectedScanIdByProject = ref<Record<string, string>>({});
+
+function fromScan(scan: BoundScan): Scan {
+  return {
+    id: scan.id,
+    projectId: scan.projectId,
+    status: scan.status as unknown as ScanStatus,
+    context: scan.context,
+    error: scan.error,
+    findingCount: scan.findingCount,
+    startedAt: scan.startedAt,
+    finishedAt: scan.finishedAt,
+  };
+}
+
+function fromFinding(finding: BoundFinding): Finding {
+  return {
+    id: finding.id,
+    scanId: finding.scanId || undefined,
+    ruleId: finding.ruleId,
+    ruleTitle: finding.ruleTitle,
+    severity: finding.severity as unknown as Severity,
+    resourceKind: finding.resourceKind,
+    resourceName: finding.resourceName,
+    namespace: finding.namespace,
+    message: finding.message,
+  };
+}
 
 export function formatScanLabel(scan: Scan): string {
   const when = new Date(scan.startedAt).toLocaleString(undefined, {
@@ -58,8 +97,13 @@ export function useScans() {
     return findingsByScan.value[scanId] ?? [];
   }
 
+  async function getScan(id: string): Promise<Scan | null> {
+    const scan = await GetScan(id);
+    return scan ? fromScan(scan) : null;
+  }
+
   async function loadFindings(scanId: string): Promise<Finding[]> {
-    const findings = await invoke<Finding[]>("list_scan_findings", { scanId });
+    const findings = ((await ListScanFindings(scanId)) ?? []).map(fromFinding);
     findingsByScan.value = { ...findingsByScan.value, [scanId]: findings };
     return findings;
   }
@@ -81,7 +125,7 @@ export function useScans() {
   }
 
   async function loadScans(projectId: string) {
-    const list = await invoke<Scan[]>("list_scans", { projectId });
+    const list = ((await ListScans(projectId)) ?? []).map(fromScan);
     scansByProject.value = { ...scansByProject.value, [projectId]: list };
 
     const current = selectedScanIdByProject.value[projectId];
@@ -90,7 +134,11 @@ export function useScans() {
   }
 
   async function runScan(projectId: string): Promise<ScanResult> {
-    const result = await invoke<ScanResult>("run_scan", { projectId });
+    const raw: BoundResult = await runScanBound(projectId);
+    const result: ScanResult = {
+      scan: fromScan(raw.scan),
+      findings: (raw.findings ?? []).map(fromFinding),
+    };
     findingsByScan.value = {
       ...findingsByScan.value,
       [result.scan.id]: result.findings,
@@ -104,6 +152,10 @@ export function useScans() {
     return result;
   }
 
+  async function previewScan(): Promise<Finding[]> {
+    return ((await PreviewScan()) ?? []).map(fromFinding);
+  }
+
   return {
     scans,
     selectedScanIds,
@@ -111,9 +163,11 @@ export function useScans() {
     selectedScanId,
     selectedScan,
     findingsFor,
+    getScan,
     loadScans,
     loadFindings,
     selectScan,
     runScan,
+    previewScan,
   };
 }
