@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"ladon/appdb"
+	"ladon/cluster"
 	"ladon/project"
 	"ladon/rule"
 
@@ -32,6 +33,7 @@ func main() {
 		Services: []application.Service{
 			application.NewService(project.New(db)),
 			application.NewService(rule.New(db)),
+			application.NewService(cluster.New(cluster.NewSession())),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

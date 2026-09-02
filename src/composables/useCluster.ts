@@ -1,5 +1,15 @@
 import { computed, readonly, ref, shallowRef } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import {
+  ConnectCluster,
+  DisconnectCluster,
+  ListKubeContexts,
+  ProbeCluster,
+} from "@/bindings/ladon/cluster/service";
+import type {
+  ClusterStatus as BoundStatus,
+  KubeContexts as BoundContexts,
+} from "@/bindings/ladon/cluster/models";
+
 
 export interface ClusterStatus {
   connected: boolean;
@@ -32,6 +42,15 @@ const contextsError = shallowRef("");
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let probeInFlight = false;
 
+function fromStatus(next: BoundStatus): ClusterStatus {
+  return {
+    connected: next.connected,
+    healthy: next.healthy,
+    context: next.context,
+    error: next.error,
+  };
+}
+
 function applyStatus(next: ClusterStatus) {
   status.value = next;
 }
@@ -40,7 +59,7 @@ async function probe() {
   if (connecting.value || disconnecting.value || probeInFlight) return;
   probeInFlight = true;
   try {
-    applyStatus(await invoke<ClusterStatus>("probe_cluster"));
+    applyStatus(fromStatus(await ProbeCluster()));
   } catch (err) {
     applyStatus({
       ...status.value,
@@ -63,8 +82,8 @@ export function useCluster() {
   async function loadContexts() {
     contextsError.value = "";
     try {
-      const result = await invoke<KubeContexts>("list_kube_contexts");
-      contexts.value = result.contexts;
+      const result: BoundContexts = await ListKubeContexts();
+      contexts.value = result.contexts ?? [];
       defaultContext.value = result.current;
     } catch (err) {
       contexts.value = [];
@@ -76,11 +95,7 @@ export function useCluster() {
   async function connect(context: string | null) {
     connecting.value = true;
     try {
-      applyStatus(
-        await invoke<ClusterStatus>("connect_cluster", {
-          context: context || null,
-        }),
-      );
+      applyStatus(fromStatus(await ConnectCluster(context)));
     } catch (err) {
       applyStatus({
         connected: status.value.connected,
@@ -97,7 +112,7 @@ export function useCluster() {
   async function disconnect() {
     disconnecting.value = true;
     try {
-      applyStatus(await invoke<ClusterStatus>("disconnect_cluster"));
+      applyStatus(fromStatus(await DisconnectCluster()));
     } finally {
       disconnecting.value = false;
     }

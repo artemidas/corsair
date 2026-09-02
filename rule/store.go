@@ -18,7 +18,7 @@ func (s *Service) ListRules() ([]Rule, error) {
 		return nil, err
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT `+selectCols+` FROM custom_rules ORDER BY created_at ASC`)
+		`SELECT `+selectCols+` FROM rules ORDER BY created_at ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *Service) ListRules() ([]Rule, error) {
 func (s *Service) GetRule(id string) (*Rule, error) {
 	ctx := context.Background()
 	row := s.db.QueryRowContext(ctx,
-		`SELECT `+selectCols+` FROM custom_rules WHERE id = ?`, id)
+		`SELECT `+selectCols+` FROM rules WHERE id = ?`, id)
 	r, err := scanRule(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -74,7 +74,7 @@ func (s *Service) CreateRule(input RuleInput) (Rule, error) {
 		UpdatedAt:     now,
 	}
 	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO custom_rules
+		`INSERT INTO rules
 		 (id, rule_id, title, description, severity, resource_type, field_path, operator, expected_value, import_id, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
 		r.ID, r.RuleID, r.Title, r.Description, string(r.Severity), r.ResourceType,
@@ -94,7 +94,7 @@ func (s *Service) UpdateRule(id string, input RuleInput) (Rule, error) {
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	res, err := s.db.ExecContext(ctx,
-		`UPDATE custom_rules SET
+		`UPDATE rules SET
 		 title = ?, description = ?, severity = ?, resource_type = ?,
 		 field_path = ?, operator = ?, expected_value = ?, updated_at = ?
 		 WHERE id = ?`,
@@ -124,7 +124,7 @@ func (s *Service) UpdateRule(id string, input RuleInput) (Rule, error) {
 
 func (s *Service) DeleteRule(id string) error {
 	ctx := context.Background()
-	res, err := s.db.ExecContext(ctx, `DELETE FROM custom_rules WHERE id = ?`, id)
+	res, err := s.db.ExecContext(ctx, `DELETE FROM rules WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (s *Service) DeleteRule(id string) error {
 
 func (s *Service) existingRuleIDs(ctx context.Context) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT rule_id FROM custom_rules WHERE rule_id IS NOT NULL AND rule_id != ''`)
+		`SELECT rule_id FROM rules WHERE rule_id IS NOT NULL AND rule_id != ''`)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (s *Service) allocateRuleID(ctx context.Context, resourceType string, prefe
 
 func (s *Service) backfillRuleIDs(ctx context.Context) error {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, resource_type, import_id FROM custom_rules
+		`SELECT id, resource_type, import_id FROM rules
 		 WHERE rule_id IS NULL OR rule_id = ''
 		 ORDER BY created_at ASC, id ASC`)
 	if err != nil {
@@ -219,7 +219,7 @@ func (s *Service) backfillRuleIDs(ctx context.Context) error {
 			return err
 		}
 		if _, err := s.db.ExecContext(ctx,
-			`UPDATE custom_rules SET rule_id = ? WHERE id = ?`, ruleID, m.id); err != nil {
+			`UPDATE rules SET rule_id = ? WHERE id = ?`, ruleID, m.id); err != nil {
 			return err
 		}
 	}

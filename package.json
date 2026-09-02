@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "wails:dev": "wails3 dev -config ./build/config.yml -port 1420",
-    "wails:bindings": "wails3 generate bindings -ts -i -d ./src/bindings . ./project ./rule"
+    "wails:bindings": "wails3 generate bindings -ts -i -d ./src/bindings . ./project ./rule ./cluster"
   },
   "dependencies": {
     "@lucide/vue": "^1.33.0",
