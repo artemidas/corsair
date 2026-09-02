@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { ArrowLeft, CircleAlert, ScanSearch } from "@lucide/vue";
 import { Item, ItemContent, ItemTitle, ItemDescription, ItemActions } from "@/components/ui/item";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { DataTable } from "@/components/ui/data-table";
-import type { Scan } from "@/composables/useScans";
+import { useScans, type Scan } from "@/composables/useScans";
 import { severityBadgeVariant } from "@/lib/severity";
 import { summarizeFindings, type Finding } from "@/lib/findings";
 import { createRuleFindingsColumns } from "./columns";
@@ -29,6 +28,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   back: [];
 }>();
+
+const { getScan, loadFindings } = useScans();
 
 const loading = ref(true);
 const loadError = ref("");
@@ -59,8 +60,8 @@ async function load() {
   loadError.value = "";
   try {
     const [nextScan, nextFindings] = await Promise.all([
-      invoke<Scan | null>("get_scan", { id: props.scanId }),
-      invoke<Finding[]>("list_scan_findings", { scanId: props.scanId }),
+      getScan(props.scanId),
+      loadFindings(props.scanId),
     ]);
     scan.value = nextScan;
     findings.value = nextFindings;
