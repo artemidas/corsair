@@ -70,7 +70,7 @@ func (s *Service) ConnectCluster(kubeContext *string) (ClusterStatus, error) {
 		return ClusterStatus{}, fmt.Errorf("list namespaces: %w", err)
 	}
 	resolved := s.resolveContextName(requested)
-	s.session.set(client, resolved)
+	s.session.Set(client, resolved)
 	return connectedStatus(resolved), nil
 }
 

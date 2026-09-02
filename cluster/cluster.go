@@ -33,7 +33,7 @@ func NewSession() *Session {
 	return &Session{}
 }
 
-func (s *Session) set(client kubernetes.Interface, contextName string) {
+func (s *Session) Set(client kubernetes.Interface, contextName string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.client = client
