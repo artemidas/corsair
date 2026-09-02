@@ -137,6 +137,14 @@ func (s *Service) UpdateProject(id string, input ProjectInput) (Project, error) 
 }
 
 func (s *Service) DeleteProject(id string) error {
+	if _, err := s.db.Exec(
+		`DELETE FROM findings WHERE scan_id IN (SELECT id FROM scans WHERE project_id = ?)`, id,
+	); err != nil {
+		return err
+	}
+	if _, err := s.db.Exec(`DELETE FROM scans WHERE project_id = ?`, id); err != nil {
+		return err
+	}
 	res, err := s.db.Exec(`DELETE FROM projects WHERE id = ?`, id)
 	if err != nil {
 		return err
