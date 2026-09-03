@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/empty";
 import { FindingsDataTable } from "@/components/findings";
 import ScanHistorySelect from "./ScanHistorySelect.vue";
-import ImageEngagementSummary from "./ImageEngagementSummary.vue";
+import ImageProjectDetail from "./ImageProjectDetail.vue";
 import type { Project } from "@/composables/useProjects";
 import { useCluster } from "@/composables/useCluster";
 import { useScans } from "@/composables/useScans";
@@ -240,7 +240,7 @@ async function runScan() {
     </template>
 
     <template v-else>
-      <ImageEngagementSummary :project="project" />
+      <ImageProjectDetail :project="project" />
     </template>
   </div>
 </template>

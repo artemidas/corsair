@@ -2,9 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ladon</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("ladon-theme");
+          var theme = stored === "light" || stored === "dark" ? stored : "dark";
+          document.documentElement.classList.toggle("dark", theme === "dark");
+        } catch (_) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-AHYfRfCc.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BBNHU64o.css">
   </head>
+
   <body>
-    <p>Frontend not built. Run <code>bun run build</code> or <code>wails3 dev</code>.</p>
+    <div id="app"></div>
   </body>
 </html>

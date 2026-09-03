@@ -4,6 +4,8 @@ import {
   ListScanFindings,
   ListScans,
   PreviewScan,
+  DeleteScan,
+  RunImageScan as runImageScanBound,
   RunScan as runScanBound,
 } from "@/bindings/ladon/scan/service";
 import type {
@@ -11,6 +13,8 @@ import type {
   Scan as BoundScan,
   ScanResult as BoundResult,
 } from "@/bindings/ladon/scan/models";
+import type { TrivyScanOptions } from "@/lib/trivy";
+import { toBoundTrivyOptions } from "@/lib/trivy";
 import type { Finding } from "@/lib/findings";
 import type { Severity } from "@/lib/severity";
 
@@ -152,8 +156,45 @@ export function useScans() {
     return result;
   }
 
+  async function runImageScan(
+    projectId: string,
+    options: TrivyScanOptions,
+  ): Promise<ScanResult> {
+    const raw: BoundResult = await runImageScanBound(
+      projectId,
+      toBoundTrivyOptions(options),
+    );
+    const result: ScanResult = {
+      scan: fromScan(raw.scan),
+      findings: (raw.findings ?? []).map(fromFinding),
+    };
+    findingsByScan.value = {
+      ...findingsByScan.value,
+      [result.scan.id]: result.findings,
+    };
+    const rest = scansFor(projectId).filter((scan) => scan.id !== result.scan.id);
+    scansByProject.value = {
+      ...scansByProject.value,
+      [projectId]: [result.scan, ...rest],
+    };
+    await selectScan(projectId, result.scan.id);
+    return result;
+  }
+
   async function previewScan(): Promise<Finding[]> {
     return ((await PreviewScan()) ?? []).map(fromFinding);
+  }
+
+  async function deleteScan(projectId: string, id: string) {
+    await DeleteScan(id);
+    const rest = scansFor(projectId).filter((scan) => scan.id !== id);
+    scansByProject.value = { ...scansByProject.value, [projectId]: rest };
+    if (id in findingsByScan.value) {
+      const nextFindings = { ...findingsByScan.value };
+      delete nextFindings[id];
+      findingsByScan.value = nextFindings;
+    }
+    await selectScan(projectId, rest[0]?.id);
   }
 
   return {
@@ -168,6 +209,8 @@ export function useScans() {
     loadFindings,
     selectScan,
     runScan,
+    runImageScan,
     previewScan,
+    deleteScan,
   };
 }

@@ -124,6 +124,14 @@ func (s *Service) getScan(id string) (*Scan, error) {
 	return &sc, nil
 }
 
+func (s *Service) deleteScan(id string) error {
+	_, err := s.db.Exec(
+		`DELETE FROM scans WHERE id = ?`,
+		id,
+	)
+	return err
+}
+
 func (s *Service) listFindings(scanID string) ([]Finding, error) {
 	rows, err := s.db.Query(
 		`SELECT id, scan_id, rule_id, rule_title, severity, resource_kind, resource_name, namespace, message

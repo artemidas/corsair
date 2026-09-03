@@ -16,6 +16,7 @@ import (
 	"ladon/cluster"
 	"ladon/project"
 	"ladon/rule"
+	"ladon/trivy"
 )
 
 func boolPtr(v bool) *bool { return &v }
@@ -42,7 +43,7 @@ func setup(t *testing.T) (*Service, *cluster.Session, *project.Service) {
 	}
 	t.Cleanup(func() { _ = appdb.Close(db) })
 	session := cluster.NewSession()
-	return New(db, session, rule.New(db)), session, project.New(db)
+	return New(db, session, rule.New(db), project.New(db), trivy.New()), session, project.New(db)
 }
 
 func TestPreviewAndRunScan(t *testing.T) {
@@ -132,6 +133,27 @@ func TestRunScanPersistsFailure(t *testing.T) {
 	}
 	if result.Scan.Status != StatusFailed || result.Scan.Error == nil {
 		t.Fatalf("failed scan = %+v", result.Scan)
+	}
+}
+
+func TestRunImageScanRejectsClusterProject(t *testing.T) {
+	svc, _, projects := setup(t)
+	created, err := projects.CreateProject(project.ProjectInput{
+		Name: "cluster",
+		Kind: project.KindKubernetesClusterReview,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RunImageScan(created.ID, trivy.ScanOptions{}); err == nil {
+		t.Fatal("expected kind mismatch error")
+	}
+}
+
+func TestRunImageScanMissingProject(t *testing.T) {
+	svc, _, _ := setup(t)
+	if _, err := svc.RunImageScan("missing", trivy.ScanOptions{}); err == nil {
+		t.Fatal("expected missing project error")
 	}
 }
 

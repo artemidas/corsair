@@ -7,19 +7,23 @@ import (
 	"time"
 
 	"ladon/cluster"
+	"ladon/project"
 	"ladon/rule"
+	"ladon/trivy"
 
 	"k8s.io/client-go/kubernetes"
 )
 
 type Service struct {
-	db      *sql.DB
-	session *cluster.Session
-	rules   *rule.Service
+	db       *sql.DB
+	session  *cluster.Session
+	rules    *rule.Service
+	projects *project.Service
+	trivy    *trivy.Scanner
 }
 
-func New(db *sql.DB, session *cluster.Session, rules *rule.Service) *Service {
-	return &Service{db: db, session: session, rules: rules}
+func New(db *sql.DB, session *cluster.Session, rules *rule.Service, projects *project.Service, scanner *trivy.Scanner) *Service {
+	return &Service{db: db, session: session, rules: rules, projects: projects, trivy: scanner}
 }
 
 func (s *Service) PreviewScan() ([]Finding, error) {
@@ -46,6 +50,37 @@ func (s *Service) RunScan(projectID string) (ScanResult, error) {
 	return s.persist(projectID, nonemptyPtr(contextName), findings, evalErr)
 }
 
+func (s *Service) RunImageScan(projectID string, opts trivy.ScanOptions) (ScanResult, error) {
+	proj, err := s.projects.GetProject(projectID)
+	if err != nil {
+		return ScanResult{}, err
+	}
+	if proj == nil {
+		return ScanResult{}, fmt.Errorf("project '%s' not found", projectID)
+	}
+	if proj.Kind != project.KindContainerImageReview {
+		return ScanResult{}, fmt.Errorf("project '%s' is not a container image review", projectID)
+	}
+	images := project.CollectImages(proj.Config)
+	raw, evalErr := s.trivy.ScanImages(images, opts)
+	return s.persist(projectID, nil, toScanFindings(raw), evalErr)
+}
+
+func toScanFindings(raw []trivy.Finding) []Finding {
+	out := make([]Finding, 0, len(raw))
+	for _, f := range raw {
+		out = append(out, Finding{
+			RuleID:       f.RuleID,
+			RuleTitle:    f.RuleTitle,
+			Severity:     f.Severity,
+			ResourceKind: f.ResourceKind,
+			ResourceName: f.ResourceName,
+			Message:      f.Message,
+		})
+	}
+	return out
+}
+
 func (s *Service) ListScans(projectID string) ([]Scan, error) {
 	return s.listScans(projectID)
 }
@@ -56,6 +91,10 @@ func (s *Service) GetScan(id string) (*Scan, error) {
 
 func (s *Service) ListScanFindings(scanID string) ([]Finding, error) {
 	return s.listFindings(scanID)
+}
+
+func (s *Service) DeleteScan(id string) error {
+	return s.deleteScan(id)
 }
 
 func (s *Service) projectExists(id string) (bool, error) {

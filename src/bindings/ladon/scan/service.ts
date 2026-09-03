@@ -7,7 +7,15 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as trivy$0 from "../trivy/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
+
+export function DeleteScan(id: string): $CancellablePromise<void> {
+    return $Call.ByID(2807852572, id);
+}
 
 export function GetScan(id: string): $CancellablePromise<$models.Scan | null> {
     return $Call.ByID(3477173815, id);
@@ -23,6 +31,10 @@ export function ListScans(projectID: string): $CancellablePromise<$models.Scan[]
 
 export function PreviewScan(): $CancellablePromise<$models.Finding[] | null> {
     return $Call.ByID(3653413471);
+}
+
+export function RunImageScan(projectID: string, opts: trivy$0.ScanOptions): $CancellablePromise<$models.ScanResult> {
+    return $Call.ByID(2507655621, projectID, opts);
 }
 
 export function RunScan(projectID: string): $CancellablePromise<$models.ScanResult> {

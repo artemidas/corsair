@@ -11,6 +11,7 @@ import (
 	"ladon/project"
 	"ladon/rule"
 	"ladon/scan"
+	"ladon/trivy"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -31,14 +32,15 @@ func main() {
 
 	session := cluster.NewSession()
 	ruleSvc := rule.New(db)
+	projectSvc := project.New(db)
 	app := application.New(application.Options{
 		Name:        "Ladon",
 		Description: "Kubernetes security review",
 		Services: []application.Service{
-			application.NewService(project.New(db)),
+			application.NewService(projectSvc),
 			application.NewService(ruleSvc),
 			application.NewService(cluster.New(session)),
-			application.NewService(scan.New(db, session, ruleSvc)),
+			application.NewService(scan.New(db, session, ruleSvc, projectSvc, trivy.New())),
 			application.NewService(images.New()),
 		},
 		Assets: application.AssetOptions{
