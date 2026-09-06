@@ -2,17 +2,16 @@
 import { computed, ref, watch } from "vue";
 import { CircleAlert } from "@lucide/vue";
 import {
-  NEEDS_EXPECTED_VALUE,
-  OPERATORS,
+  DEFAULT_REGO,
   RESOURCE_TYPES,
   useRules,
-  type Operator,
   type Rule,
   type RuleInput,
   type RuleSeverity,
 } from "@/composables/useRules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -58,46 +57,22 @@ const submitError = ref<string | null>(null);
 
 const form = useForm<RuleInput>({
   validationSchema: toTypedSchema(
-    z
-      .object({
-        title: z.string().trim().min(1, "Title is required."),
-        description: z.string(),
-        severity: z.enum(["critical", "high", "medium", "low"]),
-        resourceType: z.string().min(1, "Resource type is required."),
-        fieldPath: z.string().trim().min(1, "Field path is required."),
-        operator: z.enum([
-          "equals",
-          "notEquals",
-          "present",
-          "absent",
-          "arrayExcludes",
-        ]),
-        expectedValue: z.string(),
-      })
-      .refine(
-        (v) =>
-          !NEEDS_EXPECTED_VALUE.includes(v.operator) ||
-          v.expectedValue.trim().length > 0,
-        {
-          message: "Expected value is required for this operator.",
-          path: ["expectedValue"],
-        },
-      ),
+    z.object({
+      title: z.string().trim().min(1, "Title is required."),
+      description: z.string(),
+      severity: z.enum(["critical", "high", "medium", "low"]),
+      resourceType: z.string().min(1, "Resource type is required."),
+      rego: z.string().trim().min(1, "Rego policy is required."),
+    }),
   ),
   initialValues: {
     title: "",
     description: "",
     severity: "medium" as RuleSeverity,
     resourceType: "Pod",
-    fieldPath: "",
-    operator: "equals" as Operator,
-    expectedValue: "",
+    rego: DEFAULT_REGO,
   },
 });
-
-const showExpectedValue = computed(() =>
-  NEEDS_EXPECTED_VALUE.includes(form.values.operator ?? "equals"),
-);
 
 const onSubmit = form.handleSubmit(async (values) => {
   isSubmitting.value = true;
@@ -124,9 +99,7 @@ function reset() {
         description: props.rule.description,
         severity: props.rule.severity,
         resourceType: props.rule.resourceType,
-        fieldPath: props.rule.fieldPath,
-        operator: props.rule.operator,
-        expectedValue: props.rule.expectedValue,
+        rego: props.rule.rego,
       },
     });
   } else {
@@ -136,9 +109,7 @@ function reset() {
         description: "",
         severity: "medium",
         resourceType: "Pod",
-        fieldPath: "",
-        operator: "equals",
-        expectedValue: "",
+        rego: DEFAULT_REGO,
       },
     });
   }
@@ -161,7 +132,7 @@ function onOpenChange(open: boolean) {
 
 <template>
   <Dialog :open="true" @update:open="onOpenChange">
-    <DialogContent>
+    <DialogContent class="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>{{ title }}</DialogTitle>
       </DialogHeader>
@@ -245,61 +216,22 @@ function onOpenChange(open: boolean) {
           </FormField>
         </div>
 
-        <FormField v-slot="{ componentField }" name="operator">
-          <FormItem>
-            <FormLabel>Operator</FormLabel>
-            <Select v-bind="componentField">
-              <FormControl>
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="Select operator" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem
-                    v-for="op in OPERATORS"
-                    :key="op.value"
-                    :value="op.value"
-                  >
-                    {{ op.label }}
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </FormItem>
-        </FormField>
-
-        <FormField v-slot="{ componentField }" name="fieldPath">
+        <FormField v-slot="{ componentField }" name="rego">
           <FormItem>
             <FormLabel>
-              Field path
+              Rego policy
               <span class="text-xs font-normal text-muted-foreground">
-                (use <span class="font-mono">[*]</span> for arrays)
+                package
+                <span class="font-mono">ladon</span>, define
+                <span class="font-mono">violation</span>
               </span>
             </FormLabel>
             <FormControl>
-              <Input
+              <Textarea
                 v-bind="componentField"
-                placeholder="spec.containers[*].securityContext.privileged"
-                class="font-mono"
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-
-        <FormField
-          v-if="showExpectedValue"
-          v-slot="{ componentField }"
-          name="expectedValue"
-        >
-          <FormItem>
-            <FormLabel>Expected value</FormLabel>
-            <FormControl>
-              <Input
-                v-bind="componentField"
-                placeholder="true"
-                class="font-mono"
+                placeholder="package ladon"
+                class="min-h-48"
+                spellcheck="false"
               />
             </FormControl>
             <FormMessage />

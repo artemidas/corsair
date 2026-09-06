@@ -42,10 +42,25 @@ rules:
     expectedValue: "true"
 `
 
+const sampleRegoPack = `
+version: 2
+rules:
+  - id: POD020
+    title: Host PID
+    severity: high
+    resourceType: Pod
+    matcher: rego
+    rego: |
+      package ladon
+      violation if {
+        input.spec.hostPID == true
+      }
+`
+
 func TestParseRejectsUnsupportedVersion(t *testing.T) {
 	t.Parallel()
-	_, err := parseRulePack("version: 2\nrules: []")
-	if err == nil || err.Error() != "unsupported rule pack version: 2" {
+	_, err := parseRulePack("version: 3\nrules: []")
+	if err == nil || err.Error() != "unsupported rule pack version: 3" {
 		t.Fatalf("err = %v", err)
 	}
 }
@@ -102,15 +117,19 @@ func TestExportRoundTripPreservesImportID(t *testing.T) {
 	t.Parallel()
 	importID := "POD010"
 	rule := Rule{
-		ID:            "uuid-1",
-		RuleID:        "POD10",
-		Title:         "CPU limit not set",
-		Severity:      SeverityMedium,
-		ResourceType:  "Pod",
-		FieldPath:     "spec.containers[*].resources.limits.cpu",
-		Operator:      OpAbsent,
-		ExpectedValue: "",
-		ImportID:      &importID,
+		ID:           "uuid-1",
+		RuleID:       "POD10",
+		Title:        "CPU limit not set",
+		Severity:     SeverityMedium,
+		ResourceType: "Pod",
+		Rego: `package ladon
+
+violation if {
+	some v0 in input.spec.containers
+	not v0.resources.limits.cpu
+}
+`,
+		ImportID: &importID,
 	}
 	yamlText, err := serializeRulePack([]Rule{rule})
 	if err != nil {
@@ -120,14 +139,14 @@ func TestExportRoundTripPreservesImportID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pack.Version != 1 {
+	if pack.Version != 2 {
 		t.Fatalf("version = %d", pack.Version)
 	}
 	if pack.Rules[0].ID == nil || *pack.Rules[0].ID != "POD010" {
 		t.Fatalf("id = %v", pack.Rules[0].ID)
 	}
-	if pack.Rules[0].Operator == nil || *pack.Rules[0].Operator != OpAbsent {
-		t.Fatalf("operator = %v", pack.Rules[0].Operator)
+	if !strings.Contains(pack.Rules[0].Rego, "package ladon") {
+		t.Fatalf("rego = %q", pack.Rules[0].Rego)
 	}
 }
 
@@ -171,12 +190,10 @@ func TestMergeReimportUpdatesInsteadOfDuplicating(t *testing.T) {
 func TestReplaceLeavesHandAuthoredRows(t *testing.T) {
 	svc := testRuleService(t)
 	if _, err := svc.CreateRule(RuleInput{
-		Title:         "hand",
-		Severity:      SeverityLow,
-		ResourceType:  "Pod",
-		FieldPath:     "spec.hostNetwork",
-		Operator:      OpEquals,
-		ExpectedValue: "true",
+		Title:        "hand",
+		Severity:     SeverityLow,
+		ResourceType: "Pod",
+		Rego:         DefaultRego,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +232,7 @@ func TestReplaceLeavesHandAuthoredRows(t *testing.T) {
 
 func TestExportRulesWritesYAMLExtension(t *testing.T) {
 	svc := testRuleService(t)
-	pack, err := parseRulePack(samplePack)
+	pack, err := parseRulePack(sampleRegoPack)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,13 +253,13 @@ func TestExportRulesWritesYAMLExtension(t *testing.T) {
 	}
 	var found bool
 	for _, entry := range parsed.Rules {
-		if entry.ID != nil && *entry.ID == "POD010" {
+		if entry.ID != nil && *entry.ID == "POD020" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Fatal("exported pack missing POD010")
+		t.Fatal("exported pack missing POD020")
 	}
 }
 

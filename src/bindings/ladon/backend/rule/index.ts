@@ -8,7 +8,6 @@ export {
 
 export {
     ImportMode,
-    Operator,
     Severity
 } from "./models.js";
 

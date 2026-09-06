@@ -32,8 +32,6 @@ import { ruleFindingsColumns } from "@/components/findings";
 import {
   useRules,
   describeCheck,
-  NEEDS_EXPECTED_VALUE,
-  OPERATOR_LABEL,
   type Rule,
 } from "@/composables/useRules";
 import { useCluster } from "@/composables/useCluster";
@@ -54,10 +52,6 @@ const emit = defineEmits<{
 const { deleteRule } = useRules();
 const { isConnected } = useCluster();
 const { previewScan } = useScans();
-
-const needsExpected = computed(() =>
-  NEEDS_EXPECTED_VALUE.includes(props.rule.operator),
-);
 
 const scanning = ref(false);
 const scanError = ref("");
@@ -168,32 +162,20 @@ watch(
         <CardTitle>Check</CardTitle>
       </CardHeader>
       <CardContent>
-        <div class="grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+        <div class="flex flex-col gap-3 text-sm">
           <div>
             <div class="text-xs uppercase tracking-wide text-muted-foreground">
               Resource
             </div>
             <div class="mt-1 font-mono">{{ rule.resourceType }}</div>
           </div>
-          <div class="md:col-span-2">
-            <div class="text-xs uppercase tracking-wide text-muted-foreground">
-              Field path
-            </div>
-            <div class="mt-1 font-mono">{{ rule.fieldPath }}</div>
-          </div>
           <div>
             <div class="text-xs uppercase tracking-wide text-muted-foreground">
-              Operator
+              Policy
             </div>
-            <div class="mt-1 font-mono">{{ OPERATOR_LABEL[rule.operator] }}</div>
+            <pre class="mt-1 overflow-x-auto rounded-md border bg-muted/40 p-3 font-mono text-xs">{{ rule.rego }}</pre>
           </div>
-          <div v-if="needsExpected">
-            <div class="text-xs uppercase tracking-wide text-muted-foreground">
-              Expected
-            </div>
-            <div class="mt-1 font-mono">{{ rule.expectedValue }}</div>
-          </div>
-          <div class="md:col-span-3 font-mono text-xs text-muted-foreground">
+          <div class="font-mono text-xs text-muted-foreground">
             {{ describeCheck(rule) }}
           </div>
         </div>

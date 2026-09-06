@@ -24,48 +24,33 @@ const (
 	OpArrayExcludes Operator = "arrayExcludes"
 )
 
-func (o Operator) NeedsExpectedValue() bool {
-	switch o {
-	case OpEquals, OpNotEquals, OpArrayExcludes:
-		return true
-	default:
-		return false
-	}
-}
-
 type Rule struct {
-	ID            string   `json:"id"`
-	RuleID        string   `json:"ruleId"`
-	Title         string   `json:"title"`
-	Description   string   `json:"description"`
-	Severity      Severity `json:"severity"`
-	ResourceType  string   `json:"resourceType"`
-	FieldPath     string   `json:"fieldPath"`
-	Operator      Operator `json:"operator"`
-	ExpectedValue string   `json:"expectedValue"`
-	ImportID      *string  `json:"importId"`
-	CreatedAt     string   `json:"createdAt"`
-	UpdatedAt     string   `json:"updatedAt"`
+	ID           string   `json:"id"`
+	RuleID       string   `json:"ruleId"`
+	Title        string   `json:"title"`
+	Description  string   `json:"description"`
+	Severity     Severity `json:"severity"`
+	ResourceType string   `json:"resourceType"`
+	Rego         string   `json:"rego"`
+	ImportID     *string  `json:"importId"`
+	CreatedAt    string   `json:"createdAt"`
+	UpdatedAt    string   `json:"updatedAt"`
 }
 
 type RuleInput struct {
-	Title         string   `json:"title"`
-	Description   string   `json:"description"`
-	Severity      Severity `json:"severity"`
-	ResourceType  string   `json:"resourceType"`
-	FieldPath     string   `json:"fieldPath"`
-	Operator      Operator `json:"operator"`
-	ExpectedValue string   `json:"expectedValue"`
+	Title        string   `json:"title"`
+	Description  string   `json:"description"`
+	Severity     Severity `json:"severity"`
+	ResourceType string   `json:"resourceType"`
+	Rego         string   `json:"rego"`
 }
 
 type preparedInput struct {
-	title         string
-	description   string
-	severity      Severity
-	resourceType  string
-	fieldPath     string
-	operator      Operator
-	expectedValue string
+	title        string
+	description  string
+	severity     Severity
+	resourceType string
+	rego         string
 }
 
 func ParseSeverity(s string) (Severity, error) {
@@ -89,36 +74,25 @@ func ParseOperator(s string) (Operator, error) {
 func prepareInput(input RuleInput) (preparedInput, error) {
 	title := strings.TrimSpace(input.Title)
 	resourceType := strings.TrimSpace(input.ResourceType)
-	fieldPath := strings.TrimSpace(input.FieldPath)
 	if title == "" {
 		return preparedInput{}, fmt.Errorf("title must not be empty")
 	}
 	if resourceType == "" {
 		return preparedInput{}, fmt.Errorf("resource_type must not be empty")
 	}
-	if fieldPath == "" {
-		return preparedInput{}, fmt.Errorf("field_path must not be empty")
-	}
-	if input.Operator == "" {
-		input.Operator = OpEquals
-	}
-	if _, err := ParseOperator(string(input.Operator)); err != nil {
-		return preparedInput{}, err
-	}
 	if _, err := ParseSeverity(string(input.Severity)); err != nil {
 		return preparedInput{}, err
 	}
-	if input.Operator.NeedsExpectedValue() && strings.TrimSpace(input.ExpectedValue) == "" {
-		return preparedInput{}, fmt.Errorf("expected_value is required for this operator")
+	rego, err := Validate(input.Rego)
+	if err != nil {
+		return preparedInput{}, err
 	}
 	return preparedInput{
-		title:         title,
-		description:   strings.TrimSpace(input.Description),
-		severity:      input.Severity,
-		resourceType:  resourceType,
-		fieldPath:     fieldPath,
-		operator:      input.Operator,
-		expectedValue: input.ExpectedValue,
+		title:        title,
+		description:  strings.TrimSpace(input.Description),
+		severity:     input.Severity,
+		resourceType: resourceType,
+		rego:         rego,
 	}, nil
 }
 

@@ -10,20 +10,24 @@ import {
 import type {
   ImportMode as BoundImportMode,
   ImportSummary as BoundImportSummary,
-  Operator as BoundOperator,
   Rule as BoundRule,
   RuleInput as BoundRuleInput,
   Severity as BoundSeverity,
 } from "@/bindings/ladon/backend/rule/models";
 
 export type RuleSeverity = "critical" | "high" | "medium" | "low";
-export type Operator =
-  | "equals"
-  | "notEquals"
-  | "present"
-  | "absent"
-  | "arrayExcludes";
 export type ImportMode = "merge" | "replace";
+
+export const DEFAULT_REGO = `package ladon
+
+# input is one Kubernetes resource of the selected kind.
+# Example:
+#   some c in input.spec.containers
+#   c.securityContext.privileged == true
+violation if {
+	false
+}
+`;
 
 export interface Rule {
   id: string;
@@ -32,9 +36,7 @@ export interface Rule {
   description: string;
   severity: RuleSeverity;
   resourceType: string;
-  fieldPath: string;
-  operator: Operator;
-  expectedValue: string;
+  rego: string;
   importId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -45,9 +47,7 @@ export interface RuleInput {
   description: string;
   severity: RuleSeverity;
   resourceType: string;
-  fieldPath: string;
-  operator: Operator;
-  expectedValue: string;
+  rego: string;
 }
 
 export interface SkippedRule {
@@ -71,31 +71,8 @@ export const RESOURCE_TYPES = [
   "ClusterRoleBinding",
 ] as const;
 
-export const OPERATORS: { value: Operator; label: string }[] = [
-  { value: "equals", label: "equals" },
-  { value: "notEquals", label: "not equals" },
-  { value: "present", label: "is present" },
-  { value: "absent", label: "is absent" },
-  { value: "arrayExcludes", label: "array excludes" },
-];
-
-export const NEEDS_EXPECTED_VALUE: Operator[] = [
-  "equals",
-  "notEquals",
-  "arrayExcludes",
-];
-
-export const OPERATOR_LABEL: Record<Operator, string> = {
-  equals: "==",
-  notEquals: "!=",
-  present: "is set",
-  absent: "is not set",
-  arrayExcludes: "excludes",
-};
-
 export function describeCheck(r: Rule): string {
-  const needsValue = NEEDS_EXPECTED_VALUE.includes(r.operator);
-  return `${r.resourceType} · ${r.fieldPath} ${OPERATOR_LABEL[r.operator]}${needsValue ? " " + r.expectedValue : ""}`;
+  return `${r.resourceType} · Rego policy`;
 }
 
 function toBoundInput(input: RuleInput): BoundRuleInput {
@@ -104,9 +81,7 @@ function toBoundInput(input: RuleInput): BoundRuleInput {
     description: input.description,
     severity: input.severity as BoundSeverity,
     resourceType: input.resourceType,
-    fieldPath: input.fieldPath,
-    operator: input.operator as BoundOperator,
-    expectedValue: input.expectedValue,
+    rego: input.rego,
   };
 }
 
@@ -118,9 +93,7 @@ function fromBound(rule: BoundRule): Rule {
     description: rule.description,
     severity: rule.severity as RuleSeverity,
     resourceType: rule.resourceType,
-    fieldPath: rule.fieldPath,
-    operator: rule.operator as Operator,
-    expectedValue: rule.expectedValue,
+    rego: rule.rego,
     importId: rule.importId,
     createdAt: rule.createdAt,
     updatedAt: rule.updatedAt,

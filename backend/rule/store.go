@@ -11,7 +11,7 @@ import (
 )
 
 const selectCols = `id, rule_id, title, description, severity, resource_type,
-	field_path, operator, expected_value, import_id, created_at, updated_at`
+	rego, import_id, created_at, updated_at`
 
 func (s *Service) ListRules() ([]Rule, error) {
 	ctx := context.Background()
@@ -67,26 +67,23 @@ func (s *Service) insertRule(input RuleInput, importID *string) (Rule, error) {
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	r := Rule{
-		ID:            uuid.NewString(),
-		RuleID:        ruleID,
-		Title:         prepared.title,
-		Description:   prepared.description,
-		Severity:      prepared.severity,
-		ResourceType:  prepared.resourceType,
-		FieldPath:     prepared.fieldPath,
-		Operator:      prepared.operator,
-		ExpectedValue: prepared.expectedValue,
-		ImportID:      importID,
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		ID:           uuid.NewString(),
+		RuleID:       ruleID,
+		Title:        prepared.title,
+		Description:  prepared.description,
+		Severity:     prepared.severity,
+		ResourceType: prepared.resourceType,
+		Rego:         prepared.rego,
+		ImportID:     importID,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 	_, err = s.db.ExecContext(ctx,
 		`INSERT INTO rules
-		 (id, rule_id, title, description, severity, resource_type, field_path, operator, expected_value, import_id, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 (id, rule_id, title, description, severity, resource_type, rego, import_id, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.ID, r.RuleID, r.Title, r.Description, string(r.Severity), r.ResourceType,
-		r.FieldPath, string(r.Operator), r.ExpectedValue, nullString(importID),
-		r.CreatedAt, r.UpdatedAt,
+		r.Rego, nullString(importID), r.CreatedAt, r.UpdatedAt,
 	)
 	if err != nil {
 		return Rule{}, err
@@ -142,11 +139,10 @@ func (s *Service) UpdateRule(id string, input RuleInput) (Rule, error) {
 	res, err := s.db.ExecContext(ctx,
 		`UPDATE rules SET
 		 title = ?, description = ?, severity = ?, resource_type = ?,
-		 field_path = ?, operator = ?, expected_value = ?, updated_at = ?
+		 rego = ?, updated_at = ?
 		 WHERE id = ?`,
 		prepared.title, prepared.description, string(prepared.severity),
-		prepared.resourceType, prepared.fieldPath, string(prepared.operator),
-		prepared.expectedValue, now, id,
+		prepared.resourceType, prepared.rego, now, id,
 	)
 	if err != nil {
 		return Rule{}, err
@@ -278,12 +274,12 @@ type rowScanner interface {
 
 func scanRule(row rowScanner) (Rule, error) {
 	var (
-		id, title, description, severity, resourceType, fieldPath, operator, expected, createdAt, updatedAt string
-		ruleID, importID                                                                                    sql.NullString
+		id, title, description, severity, resourceType, rego, createdAt, updatedAt string
+		ruleID, importID                                                           sql.NullString
 	)
 	if err := row.Scan(
 		&id, &ruleID, &title, &description, &severity, &resourceType,
-		&fieldPath, &operator, &expected, &importID, &createdAt, &updatedAt,
+		&rego, &importID, &createdAt, &updatedAt,
 	); err != nil {
 		return Rule{}, err
 	}
@@ -291,22 +287,16 @@ func scanRule(row rowScanner) (Rule, error) {
 	if err != nil {
 		return Rule{}, err
 	}
-	op, err := ParseOperator(operator)
-	if err != nil {
-		return Rule{}, err
-	}
 	r := Rule{
-		ID:            id,
-		RuleID:        ruleID.String,
-		Title:         title,
-		Description:   description,
-		Severity:      sev,
-		ResourceType:  resourceType,
-		FieldPath:     fieldPath,
-		Operator:      op,
-		ExpectedValue: expected,
-		CreatedAt:     createdAt,
-		UpdatedAt:     updatedAt,
+		ID:           id,
+		RuleID:       ruleID.String,
+		Title:        title,
+		Description:  description,
+		Severity:     sev,
+		ResourceType: resourceType,
+		Rego:         rego,
+		CreatedAt:    createdAt,
+		UpdatedAt:    updatedAt,
 	}
 	if importID.Valid {
 		r.ImportID = &importID.String

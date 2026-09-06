@@ -17,19 +17,6 @@ export interface ImportSummary {
     "skipped": SkippedRule[] | null;
 }
 
-export enum Operator {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    OpEquals = "equals",
-    OpNotEquals = "notEquals",
-    OpPresent = "present",
-    OpAbsent = "absent",
-    OpArrayExcludes = "arrayExcludes",
-};
-
 export interface Rule {
     "id": string;
     "ruleId": string;
@@ -37,9 +24,7 @@ export interface Rule {
     "description": string;
     "severity": Severity;
     "resourceType": string;
-    "fieldPath": string;
-    "operator": Operator;
-    "expectedValue": string;
+    "rego": string;
     "importId": string | null;
     "createdAt": string;
     "updatedAt": string;
@@ -50,9 +35,7 @@ export interface RuleInput {
     "description": string;
     "severity": Severity;
     "resourceType": string;
-    "fieldPath": string;
-    "operator": Operator;
-    "expectedValue": string;
+    "rego": string;
 }
 
 export enum Severity {

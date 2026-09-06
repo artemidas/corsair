@@ -17,13 +17,13 @@ func TestPrepareInput(t *testing.T) {
 		{
 			name: "ok",
 			in: RuleInput{
-				Title: "  Privileged  ", ResourceType: " Pod ", FieldPath: " spec.hostNetwork ",
-				Severity: SeverityHigh, Operator: OpEquals, ExpectedValue: "true",
+				Title: "  Privileged  ", ResourceType: " Pod ",
+				Severity: SeverityHigh, Rego: DefaultRego,
 			},
 		},
-		{name: "empty title", in: RuleInput{ResourceType: "Pod", FieldPath: "x", Severity: SeverityLow, Operator: OpPresent}, wantErr: "title must not be empty"},
-		{name: "equals needs value", in: RuleInput{Title: "t", ResourceType: "Pod", FieldPath: "x", Severity: SeverityLow, Operator: OpEquals}, wantErr: "expected_value is required for this operator"},
-		{name: "present skips value", in: RuleInput{Title: "t", ResourceType: "Pod", FieldPath: "x", Severity: SeverityLow, Operator: OpPresent}},
+		{name: "empty title", in: RuleInput{ResourceType: "Pod", Severity: SeverityLow, Rego: DefaultRego}, wantErr: "title must not be empty"},
+		{name: "empty resource", in: RuleInput{Title: "t", Severity: SeverityLow, Rego: DefaultRego}, wantErr: "resource_type must not be empty"},
+		{name: "bad policy", in: RuleInput{Title: "t", ResourceType: "Pod", Severity: SeverityLow, Rego: "package other\nviolation if { true }"}, wantErr: "Rego package must be ladon, got other"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -78,22 +78,27 @@ func TestRuleCRUD(t *testing.T) {
 		if r.RuleID == "" {
 			t.Fatalf("seeded rule %s missing ruleId", r.ID)
 		}
+		if r.Rego == "" {
+			t.Fatalf("seeded rule %s missing rego", r.ID)
+		}
 	}
 
 	created, err := svc.CreateRule(RuleInput{
 		Title: "  extra  ", Description: "d", Severity: SeverityMedium,
-		ResourceType: "Pod", FieldPath: "spec.hostIPC", Operator: OpEquals, ExpectedValue: "true",
+		ResourceType: "Pod", Rego: DefaultRego,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if created.Title != "extra" || created.RuleID == "" {
+	if created.Title != "extra" || created.RuleID == "" || created.Rego == "" {
 		t.Fatalf("created = %+v", created)
 	}
 
 	updated, err := svc.UpdateRule(created.ID, RuleInput{
 		Title: "renamed", Description: "d", Severity: SeverityLow,
-		ResourceType: "Pod", FieldPath: "spec.hostIPC", Operator: OpPresent,
+		ResourceType: "Pod",
+		Rego: `package ladon
+violation if { input.spec.hostIPC == true }`,
 	})
 	if err != nil || updated.Title != "renamed" || updated.Severity != SeverityLow {
 		t.Fatalf("update = %+v %v", updated, err)

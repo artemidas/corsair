@@ -30,29 +30,44 @@ func evaluateRule(ctx context.Context, client kubernetes.Interface, r rule.Rule)
 	if err != nil {
 		return nil, err
 	}
+	prepared, err := rule.Prepare(r.Rego)
+	if err != nil {
+		return nil, fmt.Errorf("compile rule: %w", err)
+	}
 	out := []Finding{}
 	for _, item := range items {
-		leaves := rule.EvaluateFieldPath(item, r.FieldPath)
-		if !rule.EvaluateOperator(leaves, r.Operator, r.ExpectedValue) {
+		msgs, err := prepared.Eval(ctx, item)
+		if err != nil {
+			return nil, err
+		}
+		if len(msgs) == 0 {
 			continue
 		}
 		name, ns := metaFromJSON(item)
-		msg := r.Title
-		if r.Description != "" {
-			msg = r.Title + ": " + r.Description
+		for i, msg := range msgs {
+			out = append(out, Finding{
+				ID:           fmt.Sprintf("%s-%s-%s-%d", r.ID, deref(ns), name, i),
+				RuleID:       r.RuleID,
+				RuleTitle:    r.Title,
+				Severity:     r.Severity,
+				ResourceKind: r.ResourceType,
+				ResourceName: name,
+				Namespace:    ns,
+				Message:      findingMessage(r, msg),
+			})
 		}
-		out = append(out, Finding{
-			ID:           fmt.Sprintf("%s-%s-%s", r.ID, deref(ns), name),
-			RuleID:       r.RuleID,
-			RuleTitle:    r.Title,
-			Severity:     r.Severity,
-			ResourceKind: r.ResourceType,
-			ResourceName: name,
-			Namespace:    ns,
-			Message:      msg,
-		})
 	}
 	return out, nil
+}
+
+func findingMessage(r rule.Rule, msg string) string {
+	if msg != "" {
+		return msg
+	}
+	if r.Description != "" {
+		return r.Title + ": " + r.Description
+	}
+	return r.Title
 }
 
 func fetchResourcesJSON(ctx context.Context, client kubernetes.Interface, resourceType string) ([]any, error) {

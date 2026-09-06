@@ -8,13 +8,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const packVersion uint32 = 1
+const packVersion uint32 = 2
 
 type matcherKind string
 
 const (
 	matcherDeclarative matcherKind = "declarative"
 	matcherNative      matcherKind = "native"
+	matcherRego        matcherKind = "rego"
 )
 
 type ImportMode string
@@ -48,6 +49,7 @@ type rulePackEntry struct {
 	Severity          Severity     `yaml:"severity"`
 	ResourceType      string       `yaml:"resourceType"`
 	Matcher           matcherKind  `yaml:"matcher"`
+	Rego              string       `yaml:"rego"`
 	FieldPath         *string      `yaml:"fieldPath"`
 	Operator          *Operator    `yaml:"operator"`
 	ExpectedValue     scalarString `yaml:"expectedValue"`
@@ -115,12 +117,16 @@ func parseRulePack(text string) (rulePack, error) {
 	if err := yaml.Unmarshal([]byte(trimmed), &pack); err != nil {
 		return rulePack{}, fmt.Errorf("invalid rule pack YAML: %w", err)
 	}
-	if pack.Version != packVersion {
+	if pack.Version != 1 && pack.Version != packVersion {
 		return rulePack{}, fmt.Errorf("unsupported rule pack version: %d", pack.Version)
 	}
 	for i := range pack.Rules {
 		if pack.Rules[i].Matcher == "" {
-			pack.Rules[i].Matcher = matcherDeclarative
+			if strings.TrimSpace(pack.Rules[i].Rego) != "" {
+				pack.Rules[i].Matcher = matcherRego
+			} else {
+				pack.Rules[i].Matcher = matcherDeclarative
+			}
 		}
 	}
 	return pack, nil
@@ -146,18 +152,14 @@ func toPackEntry(r Rule) rulePackEntry {
 	if r.ImportID != nil && *r.ImportID != "" {
 		id = *r.ImportID
 	}
-	op := r.Operator
-	fieldPath := r.FieldPath
 	return rulePackEntry{
-		ID:            &id,
-		Title:         r.Title,
-		Description:   r.Description,
-		Severity:      r.Severity,
-		ResourceType:  r.ResourceType,
-		Matcher:       matcherDeclarative,
-		FieldPath:     &fieldPath,
-		Operator:      &op,
-		ExpectedValue: scalarString(r.ExpectedValue),
+		ID:           &id,
+		Title:        r.Title,
+		Description:  r.Description,
+		Severity:     r.Severity,
+		ResourceType: r.ResourceType,
+		Matcher:      matcherRego,
+		Rego:         r.Rego,
 	}
 }
 
@@ -180,34 +182,24 @@ func prepareEntry(entry rulePackEntry) preparedEntry {
 		}}
 	}
 
-	fieldPath := ""
-	if entry.FieldPath != nil {
-		fieldPath = strings.TrimSpace(*entry.FieldPath)
+	rego := strings.TrimSpace(entry.Rego)
+	if rego == "" && entry.Matcher == matcherDeclarative {
+		converted, err := declarativeEntryToRego(entry)
+		if err != nil {
+			return preparedEntry{skip: &SkippedRule{
+				ID: id, Title: title, Reason: err.Error(),
+			}}
+		}
+		rego = converted
 	}
-	if fieldPath == "" {
+	if rego == "" {
 		return preparedEntry{skip: &SkippedRule{
-			ID: id, Title: title, Reason: "declarative rule is missing fieldPath",
+			ID: id, Title: title, Reason: "rule is missing a Rego policy",
 		}}
 	}
-
-	if entry.Operator == nil {
+	if _, err := Validate(rego); err != nil {
 		return preparedEntry{skip: &SkippedRule{
-			ID: id, Title: title, Reason: "declarative rule is missing operator",
-		}}
-	}
-	operator := *entry.Operator
-	if _, err := ParseOperator(string(operator)); err != nil {
-		return preparedEntry{skip: &SkippedRule{
-			ID: id, Title: title, Reason: "declarative rule is missing operator",
-		}}
-	}
-
-	expected := string(entry.ExpectedValue)
-	if operator.NeedsExpectedValue() && strings.TrimSpace(expected) == "" {
-		return preparedEntry{skip: &SkippedRule{
-			ID:     id,
-			Title:  title,
-			Reason: fmt.Sprintf("operator %s requires a non-empty expectedValue", operator),
+			ID: id, Title: title, Reason: err.Error(),
 		}}
 	}
 
@@ -218,15 +210,31 @@ func prepareEntry(entry rulePackEntry) preparedEntry {
 	return preparedEntry{
 		importID: importID,
 		input: RuleInput{
-			Title:         entry.Title,
-			Description:   entry.Description,
-			Severity:      entry.Severity,
-			ResourceType:  entry.ResourceType,
-			FieldPath:     fieldPath,
-			Operator:      operator,
-			ExpectedValue: expected,
+			Title:        entry.Title,
+			Description:  entry.Description,
+			Severity:     entry.Severity,
+			ResourceType: entry.ResourceType,
+			Rego:         rego,
 		},
 	}
+}
+
+func declarativeEntryToRego(entry rulePackEntry) (string, error) {
+	fieldPath := ""
+	if entry.FieldPath != nil {
+		fieldPath = strings.TrimSpace(*entry.FieldPath)
+	}
+	if fieldPath == "" {
+		return "", fmt.Errorf("declarative rule is missing fieldPath")
+	}
+	if entry.Operator == nil {
+		return "", fmt.Errorf("declarative rule is missing operator")
+	}
+	operator := *entry.Operator
+	if _, err := ParseOperator(string(operator)); err != nil {
+		return "", fmt.Errorf("declarative rule is missing operator")
+	}
+	return ConvertDeclarative(fieldPath, string(operator), string(entry.ExpectedValue))
 }
 
 func ensureYAMLExtension(path string) string {

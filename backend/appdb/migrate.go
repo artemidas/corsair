@@ -117,6 +117,86 @@ func migrate(db *sql.DB) error {
 		if _, err := db.Exec("PRAGMA user_version = 3"); err != nil {
 			return fmt.Errorf("set schema version: %w", err)
 		}
+		version = 3
+	}
+	if version < 4 {
+		if err := migrateRulesToRego(db); err != nil {
+			return err
+		}
+		if _, err := db.Exec("PRAGMA user_version = 4"); err != nil {
+			return fmt.Errorf("set schema version: %w", err)
+		}
+	}
+	return nil
+}
+
+func migrateRulesToRego(db *sql.DB) error {
+	if _, err := db.Exec(`ALTER TABLE rules ADD COLUMN rego TEXT NOT NULL DEFAULT ''`); err != nil {
+		return fmt.Errorf("add rules.rego: %w", err)
+	}
+	rows, err := db.Query(`SELECT id, field_path, operator, expected_value FROM rules`)
+	if err != nil {
+		return fmt.Errorf("select rules for rego migration: %w", err)
+	}
+	defer rows.Close()
+
+	type legacy struct {
+		id, fieldPath, operator, expected string
+	}
+	var todo []legacy
+	for rows.Next() {
+		var row legacy
+		if err := rows.Scan(&row.id, &row.fieldPath, &row.operator, &row.expected); err != nil {
+			return err
+		}
+		todo = append(todo, row)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, row := range todo {
+		src, err := convertDeclarativeToRego(row.fieldPath, row.operator, row.expected)
+		if err != nil {
+			return fmt.Errorf("convert rule %s: %w", row.id, err)
+		}
+		if _, err := db.Exec(`UPDATE rules SET rego = ? WHERE id = ?`, src, row.id); err != nil {
+			return fmt.Errorf("write rego for rule %s: %w", row.id, err)
+		}
+	}
+
+	if _, err := db.Exec(`CREATE TABLE rules_v4 (
+		id TEXT PRIMARY KEY,
+		rule_id TEXT,
+		title TEXT NOT NULL,
+		description TEXT NOT NULL,
+		severity TEXT NOT NULL,
+		resource_type TEXT NOT NULL,
+		rego TEXT NOT NULL,
+		import_id TEXT,
+		created_at TEXT NOT NULL,
+		updated_at TEXT NOT NULL
+	)`); err != nil {
+		return fmt.Errorf("create rules_v4: %w", err)
+	}
+	if _, err := db.Exec(`INSERT INTO rules_v4
+		(id, rule_id, title, description, severity, resource_type, rego, import_id, created_at, updated_at)
+		SELECT id, rule_id, title, description, severity, resource_type, rego, import_id, created_at, updated_at
+		FROM rules`); err != nil {
+		return fmt.Errorf("copy rules: %w", err)
+	}
+	if _, err := db.Exec(`DROP TABLE rules`); err != nil {
+		return fmt.Errorf("drop legacy rules: %w", err)
+	}
+	if _, err := db.Exec(`ALTER TABLE rules_v4 RENAME TO rules`); err != nil {
+		return fmt.Errorf("rename rules_v4: %w", err)
+	}
+	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_rules_import_id
+		ON rules(import_id) WHERE import_id IS NOT NULL`); err != nil {
+		return fmt.Errorf("index rules.import_id: %w", err)
+	}
+	if _, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_rules_rule_id
+		ON rules(rule_id) WHERE rule_id IS NOT NULL AND rule_id != ''`); err != nil {
+		return fmt.Errorf("index rules.rule_id: %w", err)
 	}
 	return nil
 }
