@@ -6,7 +6,7 @@ import {
   ImportRules as importRulesBound,
   ListRules,
   UpdateRule as updateRuleBound,
-} from "@/bindings/ladon/rule/service";
+} from "@/bindings/ladon/backend/rule/service";
 import type {
   ImportMode as BoundImportMode,
   ImportSummary as BoundImportSummary,
@@ -14,7 +14,7 @@ import type {
   Rule as BoundRule,
   RuleInput as BoundRuleInput,
   Severity as BoundSeverity,
-} from "@/bindings/ladon/rule/models";
+} from "@/bindings/ladon/backend/rule/models";
 
 export type RuleSeverity = "critical" | "high" | "medium" | "low";
 export type Operator =

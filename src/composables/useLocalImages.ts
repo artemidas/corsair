@@ -1,6 +1,6 @@
 import { shallowRef } from "vue";
-import { ListLocalImages } from "@/bindings/ladon/images/service";
-import type { LocalImage as BoundImage } from "@/bindings/ladon/images/models";
+import { ListLocalImages } from "@/bindings/ladon/backend/images/service";
+import type { LocalImage as BoundImage } from "@/bindings/ladon/backend/images/models";
 
 export interface LocalImage {
   id: string;

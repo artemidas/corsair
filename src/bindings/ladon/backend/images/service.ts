@@ -10,5 +10,5 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as $models from "./models.js";
 
 export function ListLocalImages(): $CancellablePromise<$models.LocalImageList> {
-    return $Call.ByID(2929073228);
+    return $Call.ByID(3736837749);
 }

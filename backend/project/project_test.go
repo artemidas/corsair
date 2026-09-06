@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ladon/appdb"
+	"ladon/backend/appdb"
 )
 
 func ptr(s string) *string { return &s }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"ladon/rule"
+	"ladon/backend/rule"
 )
 
 func (s *Service) persist(projectID string, contextName *string, findings []Finding, evalErr error) (ScanResult, error) {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"ladon/rule"
+	"ladon/backend/rule"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"

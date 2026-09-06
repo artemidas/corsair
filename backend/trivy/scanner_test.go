@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"ladon/rule"
+	"ladon/backend/rule"
 )
 
 func TestBuildArgs(t *testing.T) {

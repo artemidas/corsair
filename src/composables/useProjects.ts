@@ -5,12 +5,12 @@ import {
   DeleteProject as deleteProjectBound,
   ListProjects,
   UpdateProject as updateProjectBound,
-} from "@/bindings/ladon/project/service";
+} from "@/bindings/ladon/backend/project/service";
 import type {
   Project as BoundProject,
   ProjectInput as BoundProjectInput,
   ProjectKind as BoundProjectKind,
-} from "@/bindings/ladon/project/models";
+} from "@/bindings/ladon/backend/project/models";
 
 export type ProjectKind = "kubernetesClusterReview" | "containerImageReview";
 

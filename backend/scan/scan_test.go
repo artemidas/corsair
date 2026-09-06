@@ -12,11 +12,11 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
 
-	"ladon/appdb"
-	"ladon/cluster"
-	"ladon/project"
-	"ladon/rule"
-	"ladon/trivy"
+	"ladon/backend/appdb"
+	"ladon/backend/cluster"
+	"ladon/backend/project"
+	"ladon/backend/rule"
+	"ladon/backend/trivy"
 )
 
 func boolPtr(v bool) *bool { return &v }

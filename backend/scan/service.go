@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"ladon/cluster"
-	"ladon/project"
-	"ladon/rule"
-	"ladon/trivy"
+	"ladon/backend/cluster"
+	"ladon/backend/project"
+	"ladon/backend/rule"
+	"ladon/backend/trivy"
 
 	"k8s.io/client-go/kubernetes"
 )

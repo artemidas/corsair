@@ -5,13 +5,13 @@ import (
 	"log"
 	"os"
 
-	"ladon/appdb"
-	"ladon/cluster"
-	"ladon/images"
-	"ladon/project"
-	"ladon/rule"
-	"ladon/scan"
-	"ladon/trivy"
+	"ladon/backend/appdb"
+	"ladon/backend/cluster"
+	"ladon/backend/images"
+	"ladon/backend/project"
+	"ladon/backend/rule"
+	"ladon/backend/scan"
+	"ladon/backend/trivy"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )

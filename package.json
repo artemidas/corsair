@@ -8,7 +8,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "wails:dev": "wails3 dev -config ./build/config.yml -port 1420",
-    "wails:bindings": "wails3 generate bindings -ts -i -d ./src/bindings . ./project ./rule ./cluster ./scan ./images ./trivy"
+    "wails:bindings": "wails3 generate bindings -ts -i -d ./src/bindings . ./backend/project ./backend/rule ./backend/cluster ./backend/scan ./backend/images ./backend/trivy"
   },
   "dependencies": {
     "@lucide/vue": "^1.33.0",

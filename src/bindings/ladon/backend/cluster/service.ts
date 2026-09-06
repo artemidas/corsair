@@ -10,17 +10,17 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as $models from "./models.js";
 
 export function ConnectCluster(kubeContext: string | null): $CancellablePromise<$models.ClusterStatus> {
-    return $Call.ByID(1759475991, kubeContext);
+    return $Call.ByID(1595945690, kubeContext);
 }
 
 export function DisconnectCluster(): $CancellablePromise<$models.ClusterStatus> {
-    return $Call.ByID(3032777145);
+    return $Call.ByID(1081736278);
 }
 
 export function ListKubeContexts(): $CancellablePromise<$models.KubeContexts> {
-    return $Call.ByID(3156481478);
+    return $Call.ByID(3464942275);
 }
 
 export function ProbeCluster(): $CancellablePromise<$models.ClusterStatus> {
-    return $Call.ByID(2887604327);
+    return $Call.ByID(1771379294);
 }

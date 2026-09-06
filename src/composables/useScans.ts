@@ -7,12 +7,12 @@ import {
   DeleteScan,
   RunImageScan as runImageScanBound,
   RunScan as runScanBound,
-} from "@/bindings/ladon/scan/service";
+} from "@/bindings/ladon/backend/scan/service";
 import type {
   Finding as BoundFinding,
   Scan as BoundScan,
   ScanResult as BoundResult,
-} from "@/bindings/ladon/scan/models";
+} from "@/bindings/ladon/backend/scan/models";
 import type { TrivyScanOptions } from "@/lib/trivy";
 import { toBoundTrivyOptions } from "@/lib/trivy";
 import type { Finding } from "@/lib/findings";

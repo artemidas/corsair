@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"ladon/rule"
+	"ladon/backend/rule"
 )
 
 type report struct {
@@ -13,10 +13,10 @@ type report struct {
 }
 
 type result struct {
-	Target              string              `json:"Target"`
-	Vulnerabilities     []vulnerability     `json:"Vulnerabilities"`
-	Misconfigurations   []misconfiguration  `json:"Misconfigurations"`
-	Secrets             []secret            `json:"Secrets"`
+	Target            string             `json:"Target"`
+	Vulnerabilities   []vulnerability    `json:"Vulnerabilities"`
+	Misconfigurations []misconfiguration `json:"Misconfigurations"`
+	Secrets           []secret           `json:"Secrets"`
 }
 
 type vulnerability struct {

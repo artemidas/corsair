@@ -14,29 +14,29 @@ import * as trivy$0 from "../trivy/models.js";
 import * as $models from "./models.js";
 
 export function DeleteScan(id: string): $CancellablePromise<void> {
-    return $Call.ByID(2807852572, id);
+    return $Call.ByID(257589703, id);
 }
 
 export function GetScan(id: string): $CancellablePromise<$models.Scan | null> {
-    return $Call.ByID(3477173815, id);
+    return $Call.ByID(2445747766, id);
 }
 
 export function ListScanFindings(scanID: string): $CancellablePromise<$models.Finding[] | null> {
-    return $Call.ByID(1643389645, scanID);
+    return $Call.ByID(3280448278, scanID);
 }
 
 export function ListScans(projectID: string): $CancellablePromise<$models.Scan[] | null> {
-    return $Call.ByID(2122534940, projectID);
+    return $Call.ByID(1588693909, projectID);
 }
 
 export function PreviewScan(): $CancellablePromise<$models.Finding[] | null> {
-    return $Call.ByID(3653413471);
+    return $Call.ByID(2633455142);
 }
 
 export function RunImageScan(projectID: string, opts: trivy$0.ScanOptions): $CancellablePromise<$models.ScanResult> {
-    return $Call.ByID(2507655621, projectID, opts);
+    return $Call.ByID(1640905806, projectID, opts);
 }
 
 export function RunScan(projectID: string): $CancellablePromise<$models.ScanResult> {
-    return $Call.ByID(2459380534, projectID);
+    return $Call.ByID(283069815, projectID);
 }

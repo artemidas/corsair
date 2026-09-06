@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"ladon/appdb"
+	"ladon/backend/appdb"
 )
 
 const samplePack = `

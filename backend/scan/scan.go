@@ -3,7 +3,7 @@ package scan
 import (
 	"fmt"
 
-	"ladon/rule"
+	"ladon/backend/rule"
 )
 
 type ScanStatus string

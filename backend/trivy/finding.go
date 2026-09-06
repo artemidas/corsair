@@ -1,7 +1,7 @@
 package trivy
 
 import (
-	"ladon/rule"
+	"ladon/backend/rule"
 )
 
 type Finding struct {

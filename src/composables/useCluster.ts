@@ -4,11 +4,11 @@ import {
   DisconnectCluster,
   ListKubeContexts,
   ProbeCluster,
-} from "@/bindings/ladon/cluster/service";
+} from "@/bindings/ladon/backend/cluster/service";
 import type {
   ClusterStatus as BoundStatus,
   KubeContexts as BoundContexts,
-} from "@/bindings/ladon/cluster/models";
+} from "@/bindings/ladon/backend/cluster/models";
 
 
 export interface ClusterStatus {

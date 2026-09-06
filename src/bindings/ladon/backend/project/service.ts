@@ -10,21 +10,21 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as $models from "./models.js";
 
 export function CreateProject(input: $models.ProjectInput): $CancellablePromise<$models.Project> {
-    return $Call.ByID(4141207031, input);
+    return $Call.ByID(2688893764, input);
 }
 
 export function DeleteProject(id: string): $CancellablePromise<void> {
-    return $Call.ByID(1383978998, id);
+    return $Call.ByID(4016229121, id);
 }
 
 export function GetProject(id: string): $CancellablePromise<$models.Project | null> {
-    return $Call.ByID(1019235743, id);
+    return $Call.ByID(282818338, id);
 }
 
 export function ListProjects(): $CancellablePromise<$models.Project[] | null> {
-    return $Call.ByID(125937940);
+    return $Call.ByID(4285493493);
 }
 
 export function UpdateProject(id: string, input: $models.ProjectInput): $CancellablePromise<$models.Project> {
-    return $Call.ByID(2727204472, id, input);
+    return $Call.ByID(2320046399, id, input);
 }
